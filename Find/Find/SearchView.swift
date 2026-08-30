@@ -456,7 +456,7 @@ struct SearchView: View {
                     .foregroundStyle(Color(red: 0.13, green: 0.71, blue: 0.93))
                     .padding(.top, 6)
 
-                    Text("© \(currentYear) TODD. All rights reserved.")
+                    Text(verbatim: "© \(currentYear) Taliferro Tech. All rights reserved.")
                         .font(.system(size: 12))
                         .foregroundStyle(.black.opacity(0.45))
                         .padding(.top, 12)
@@ -593,9 +593,9 @@ struct SearchView: View {
                     }
                     .foregroundStyle(selectedTab == tab ? Color(red: 0.13, green: 0.71, blue: 0.93) : Color.gray.opacity(0.82))
                     .frame(maxWidth: .infinity)
-                    .frame(minHeight: 50)
-                    .padding(.top, 8)
-                    .padding(.bottom, 6)
+                    .frame(minHeight: 42)
+                    .padding(.top, 5)
+                    .padding(.bottom, 4)
                     .overlay(alignment: .top) {
                         Rectangle()
                             .fill(selectedTab == tab ? Color(red: 0.13, green: 0.71, blue: 0.93) : .clear)
@@ -608,7 +608,7 @@ struct SearchView: View {
         .padding(.horizontal, 4)
         .padding(.top, 4)
         .padding(.bottom, max(10, bottomInset))
-        .frame(height: 62 + max(10, bottomInset))
+        .frame(height: 50 + max(10, bottomInset))
         .background(Color.white)
         .overlay(alignment: .top) {
             Rectangle()
@@ -854,7 +854,7 @@ struct SearchView: View {
     }
 
     private func footerReservedHeight(bottomInset: CGFloat) -> CGFloat {
-        let tabs = 62 + max(10, bottomInset)
+        let tabs = 50 + max(10, bottomInset)
         let pills: CGFloat = showStickyPills ? 42 : 0
         return tabs + pills
     }
