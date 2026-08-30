@@ -350,7 +350,7 @@ struct SearchView: View {
                 }
                 .padding(12)
             }
-            .frame(maxWidth: .infinity, height: 260, alignment: .topLeading)
+            .frame(maxWidth: .infinity, minHeight: 260, maxHeight: 260, alignment: .topLeading)
             .background(Color.white)
             .clipped()
             .overlay(
