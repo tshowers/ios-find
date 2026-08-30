@@ -292,58 +292,7 @@ struct SearchView: View {
 
                     LazyVGrid(columns: columns, spacing: 0) {
                         ForEach(0..<results.count, id: \.self) { index in
-                            let result = results[index]
-                            Button {
-                                viewModel.select(result)
-                                selectedTab = .home
-                                showingSearchScreen = false
-                            } label: {
-                                VStack(alignment: .leading, spacing: 0) {
-                                    if let imageURL = imageURL(for: result) {
-                                        AsyncImage(url: imageURL) { phase in
-                                            switch phase {
-                                            case .success(let image):
-                                                image
-                                                    .resizable()
-                                                    .scaledToFill()
-                                            default:
-                                                Rectangle()
-                                                    .fill(Color.black.opacity(0.06))
-                                            }
-                                        }
-                                        .frame(height: 110)
-                                        .clipped()
-                                    }
-
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text(result.displayUrl)
-                                            .font(.system(size: 12, weight: .bold))
-                                            .foregroundStyle(Color(red: 0.13, green: 0.71, blue: 0.93))
-                                            .lineLimit(1)
-
-                                        Text(result.title)
-                                            .font(.system(size: 18, weight: .bold))
-                                            .foregroundStyle(.black)
-                                            .multilineTextAlignment(.leading)
-                                            .lineLimit(2)
-
-                                        Text(result.summary)
-                                            .font(.system(size: 15))
-                                            .foregroundStyle(.black.opacity(0.72))
-                                            .lineLimit(3)
-                                            .multilineTextAlignment(.leading)
-                                    }
-                                    .padding(12)
-                                }
-                                .frame(maxWidth: .infinity, height: 260, alignment: .topLeading)
-                                .background(Color.white)
-                                .clipped()
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 0)
-                                        .stroke(index == selectedResultIndex ? Color(red: 0.13, green: 0.71, blue: 0.93) : Color.black.opacity(0.08), lineWidth: index == selectedResultIndex ? 2 : 1)
-                                )
-                            }
-                            .buttonStyle(.plain)
+                            gridTile(results[index], index: index)
                         }
                     }
                 }
@@ -356,6 +305,60 @@ struct SearchView: View {
             .background(Color.white)
         }
         .background(Color.white)
+    }
+
+    private func gridTile(_ result: FindRankedResult, index: Int) -> some View {
+        Button {
+            viewModel.select(result)
+            selectedTab = .home
+            showingSearchScreen = false
+        } label: {
+            VStack(alignment: .leading, spacing: 0) {
+                if let imageURL = imageURL(for: result) {
+                    AsyncImage(url: imageURL) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        default:
+                            Rectangle()
+                                .fill(Color.black.opacity(0.06))
+                        }
+                    }
+                    .frame(height: 110)
+                    .clipped()
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(result.displayUrl)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color(red: 0.13, green: 0.71, blue: 0.93))
+                        .lineLimit(1)
+
+                    Text(result.title)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.black)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(2)
+
+                    Text(result.summary)
+                        .font(.system(size: 15))
+                        .foregroundStyle(.black.opacity(0.72))
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
+                }
+                .padding(12)
+            }
+            .frame(maxWidth: .infinity, height: 260, alignment: .topLeading)
+            .background(Color.white)
+            .clipped()
+            .overlay(
+                RoundedRectangle(cornerRadius: 0)
+                    .stroke(index == selectedResultIndex ? Color(red: 0.13, green: 0.71, blue: 0.93) : Color.black.opacity(0.08), lineWidth: index == selectedResultIndex ? 2 : 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private func historyView(screenWidth: CGFloat) -> some View {
