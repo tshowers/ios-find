@@ -325,17 +325,19 @@ struct SearchView: View {
                                             .font(.system(size: 18, weight: .bold))
                                             .foregroundStyle(.black)
                                             .multilineTextAlignment(.leading)
+                                            .lineLimit(2)
 
                                         Text(result.summary)
                                             .font(.system(size: 15))
                                             .foregroundStyle(.black.opacity(0.72))
-                                            .lineLimit(4)
+                                            .lineLimit(3)
                                             .multilineTextAlignment(.leading)
                                     }
                                     .padding(12)
                                 }
-                                .frame(maxWidth: .infinity, minHeight: 250, maxHeight: .infinity, alignment: .topLeading)
+                                .frame(maxWidth: .infinity, height: 260, alignment: .topLeading)
                                 .background(Color.white)
+                                .clipped()
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 0)
                                         .stroke(index == selectedResultIndex ? Color(red: 0.13, green: 0.71, blue: 0.93) : Color.black.opacity(0.08), lineWidth: index == selectedResultIndex ? 2 : 1)
