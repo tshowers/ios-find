@@ -247,7 +247,7 @@ struct SearchView: View {
                     .help(baseQuery.isEmpty ? "Find" : baseQuery)
 
                 HStack(spacing: 5) {
-                    ForEach(results.indices, id: \.self) { index in
+                    ForEach(0..<results.count, id: \.self) { index in
                         Circle()
                             .fill(index == selectedResultIndex ? Color.gray.opacity(0.8) : Color.gray.opacity(0.35))
                             .frame(width: index == selectedResultIndex ? 8 : 6, height: index == selectedResultIndex ? 8 : 6)
@@ -291,7 +291,7 @@ struct SearchView: View {
                     ]
 
                     LazyVGrid(columns: columns, spacing: 0) {
-                        ForEach(results.indices, id: \.self) { index in
+                        ForEach(0..<results.count, id: \.self) { index in
                             let result = results[index]
                             Button {
                                 viewModel.select(result)
