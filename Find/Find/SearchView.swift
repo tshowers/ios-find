@@ -1,4 +1,5 @@
 import SwiftUI
+import NaturalLanguage
 
 struct SearchView: View {
     @StateObject private var viewModel: SearchViewModel
@@ -71,6 +72,7 @@ struct SearchView: View {
                 }
             }
         }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 
     private func homeView(screenWidth: CGFloat) -> some View {
@@ -911,13 +913,13 @@ struct SearchView: View {
         let explicit = text.split(separator: "\n").map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
         if explicit.count > 1 { return explicit }
 
-        let sentences = text.split(separator: ".").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        let sentences = sentenceTokenize(text)
         if sentences.count < 4 { return [text] }
 
         var paragraphs: [String] = []
         var chunk: [String] = []
         for sentence in sentences {
-            chunk.append(sentence + ".")
+            chunk.append(sentence)
             if chunk.count == 2 {
                 paragraphs.append(chunk.joined(separator: " "))
                 chunk.removeAll()
@@ -927,6 +929,22 @@ struct SearchView: View {
             paragraphs.append(chunk.joined(separator: " "))
         }
         return paragraphs
+    }
+
+    // NLTokenizer understands sentence-ending punctuation vs. abbreviation
+    // periods (e.g. "U.S.", "Dr.") correctly, unlike a naive split on ".".
+    private func sentenceTokenize(_ text: String) -> [String] {
+        let tokenizer = NLTokenizer(unit: .sentence)
+        tokenizer.string = text
+        var sentences: [String] = []
+        tokenizer.enumerateTokens(in: text.startIndex..<text.endIndex) { range, _ in
+            let sentence = text[range].trimmingCharacters(in: .whitespacesAndNewlines)
+            if !sentence.isEmpty {
+                sentences.append(sentence)
+            }
+            return true
+        }
+        return sentences
     }
 
     private var currentPills: [String] {
