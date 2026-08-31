@@ -456,12 +456,12 @@ struct SearchView: View {
                             .font(.system(size: 18, weight: .bold))
                             .foregroundStyle(.black)
                             .multilineTextAlignment(.leading)
-                            .lineLimit(2)
+                            .lineLimit(showsImage ? 2 : 3)
 
                         Text(result.summary)
                             .font(.system(size: 15))
                             .foregroundStyle(.black.opacity(0.72))
-                            .lineLimit(3)
+                            .lineLimit(showsImage ? 3 : 9)
                             .multilineTextAlignment(.leading)
                     }
                     .padding(12)
