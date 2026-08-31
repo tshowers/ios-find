@@ -64,6 +64,7 @@ struct SearchView: View {
             .padding(.bottom, footerReservedHeight(bottomInset: geometry.safeAreaInsets.bottom))
             .background(Theme.background)
             .overlay(alignment: .top) {
+                #if DEBUG
                 if tiltNav.isActive {
                     tiltDebugReadout
                         .padding(.horizontal, 12)
@@ -72,6 +73,7 @@ struct SearchView: View {
                         // view - the readout used to overlap and hide it.
                         .padding(.top, geometry.safeAreaInsets.top + 64)
                 }
+                #endif
             }
             .toolbar(.hidden, for: .navigationBar)
             .alert("Find", isPresented: errorPresented) {
@@ -641,9 +643,24 @@ struct SearchView: View {
     private var tiltSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             if tiltNav.isActive {
-                Text("Tilt navigation is active. Flick the device toward a pill to open it. A live sensor readout is pinned to the top of the screen while this is on.")
+                Text("Tilt navigation is active. Flick the device toward a pill to open it.")
                     .font(.system(size: 14))
                     .foregroundStyle(Theme.subtext)
+
+                Button {
+                    tiltNav.disable()
+                } label: {
+                    Text("Disable tilt navigation")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(Theme.text)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .overlay(
+                            Capsule()
+                                .stroke(Theme.border, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
             } else {
                 Button {
                     tiltNav.enable()
@@ -670,10 +687,15 @@ struct SearchView: View {
         .padding(.top, 14)
     }
 
+    #if DEBUG
     // Live sensor readout while tuning tilt navigation - shows raw rate and
     // the leaky-integrator accumulation for each axis, plus whatever
     // direction most recently fired, so the actual numbers behind a tilt
     // gesture can be read directly off the screen instead of guessed at.
+    // Compiled out of release builds entirely - not just hidden - so it
+    // never ships, without deleting it: this stays automatic (tied to the
+    // build configuration) rather than something to remember to comment out
+    // by hand before submission.
     private var tiltDebugReadout: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("DEBUG")
@@ -709,6 +731,7 @@ struct SearchView: View {
                 .foregroundStyle(Theme.text)
         }
     }
+    #endif
 
     private func bookmarkView(screenWidth: CGFloat) -> some View {
         VStack(spacing: 16) {
