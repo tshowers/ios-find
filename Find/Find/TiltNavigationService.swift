@@ -28,7 +28,24 @@ final class TiltNavigationService: ObservableObject {
     private let motionManager = CMMotionManager()
     private var baselineRoll: Double?
     private var baselinePitch: Double?
-    private let thresholdDegrees: Double = 15
+    private var smoothedRoll: Double = 0
+    private var smoothedPitch: Double = 0
+
+    // A deliberate, obvious tilt - roughly a third of the way to holding the
+    // phone on its side - not a small wobble from normal handling or
+    // scrolling. Below this, any hand tremor or scroll gesture was
+    // registering as a tilt and thrashing the pill highlight.
+    private let thresholdDegrees: Double = 45
+    // Raw device-motion samples are noisy enough, second to second, that a
+    // single sample crossing the threshold isn't trustworthy on its own -
+    // require the same direction to hold for this long before it commits.
+    private let commitDelaySeconds: TimeInterval = 1.0
+    // Exponential-moving-average weight for the incoming sample; lower is
+    // smoother/slower to react.
+    private let smoothingFactor: Double = 0.12
+
+    private var pendingDirection: TiltDirection = .center
+    private var pendingSince: Date?
 
     var isSupported: Bool {
         motionManager.isDeviceMotionAvailable
@@ -39,6 +56,8 @@ final class TiltNavigationService: ObservableObject {
 
         baselineRoll = nil
         baselinePitch = nil
+        pendingDirection = .center
+        pendingSince = nil
         motionManager.deviceMotionUpdateInterval = 1.0 / 30.0
         motionManager.startDeviceMotionUpdates(using: .xArbitraryZVertical, to: .main) { [weak self] motion, _ in
             guard let self, let motion else { return }
@@ -52,6 +71,8 @@ final class TiltNavigationService: ObservableObject {
         isActive = false
         baselineRoll = nil
         baselinePitch = nil
+        pendingDirection = .center
+        pendingSince = nil
         tilt = .center
     }
 
@@ -59,29 +80,56 @@ final class TiltNavigationService: ObservableObject {
         guard let baselineRoll, let baselinePitch else {
             self.baselineRoll = motion.attitude.roll
             self.baselinePitch = motion.attitude.pitch
+            smoothedRoll = motion.attitude.roll
+            smoothedPitch = motion.attitude.pitch
             return
         }
 
-        let rollDelta = (motion.attitude.roll - baselineRoll) * 180 / .pi
-        let pitchDelta = (motion.attitude.pitch - baselinePitch) * 180 / .pi
+        smoothedRoll += (motion.attitude.roll - smoothedRoll) * smoothingFactor
+        smoothedPitch += (motion.attitude.pitch - smoothedPitch) * smoothingFactor
 
-        var next: TiltDirection = .center
+        let rollDelta = (smoothedRoll - baselineRoll) * 180 / .pi
+        let pitchDelta = (smoothedPitch - baselinePitch) * 180 / .pi
+
+        var candidate: TiltDirection = .center
         if abs(rollDelta) > abs(pitchDelta) {
             if rollDelta > thresholdDegrees {
-                next = .left
+                candidate = .left
             } else if rollDelta < -thresholdDegrees {
-                next = .right
+                candidate = .right
             }
         } else {
             if pitchDelta > thresholdDegrees {
-                next = .up
+                candidate = .up
             } else if pitchDelta < -thresholdDegrees {
-                next = .down
+                candidate = .down
             }
         }
 
-        if next != tilt {
-            tilt = next
+        // Returning to center cancels immediately - only committing to a new
+        // direction requires the sustained hold, matching "tilt and hold",
+        // not "any flick counts".
+        if candidate == .center {
+            pendingDirection = .center
+            pendingSince = nil
+            if tilt != .center {
+                tilt = .center
+            }
+            return
+        }
+
+        if candidate != pendingDirection {
+            pendingDirection = candidate
+            pendingSince = Date()
+            return
+        }
+
+        guard let pendingSince, Date().timeIntervalSince(pendingSince) >= commitDelaySeconds else {
+            return
+        }
+
+        if tilt != candidate {
+            tilt = candidate
         }
     }
 }
