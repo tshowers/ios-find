@@ -669,6 +669,13 @@ struct SearchView: View {
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.subtext)
                         .padding(.top, 12)
+
+                    if let appVersionLabel {
+                        Text(verbatim: "Version \(appVersionLabel)")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Theme.subtext.opacity(0.7))
+                            .padding(.top, 4)
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(20)
@@ -982,6 +989,13 @@ struct SearchView: View {
 
     private var currentYear: Int {
         Calendar.current.component(.year, from: Date())
+    }
+
+    private var appVersionLabel: String? {
+        let info = Bundle.main.infoDictionary
+        guard let shortVersion = info?["CFBundleShortVersionString"] as? String else { return nil }
+        let build = info?["CFBundleVersion"] as? String
+        return build.map { "\(shortVersion) (\($0))" } ?? shortVersion
     }
 
     private func infoCard(_ number: String, _ title: String, _ body: String) -> some View {
