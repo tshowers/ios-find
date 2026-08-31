@@ -338,8 +338,16 @@ struct SearchView: View {
             }
             .frame(maxWidth: .infinity)
 
-            Color.clear
-                .frame(width: 44, height: 1)
+            Button {
+                goToNextResult()
+            } label: {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(results.isEmpty || selectedResultIndex >= results.count - 1 ? .black.opacity(0.25) : .black)
+                    .frame(width: 44, height: 44)
+            }
+            .contentShape(Rectangle())
+            .disabled(results.isEmpty || selectedResultIndex >= results.count - 1)
         }
         .frame(width: screenWidth)
         .padding(.horizontal, 12)
