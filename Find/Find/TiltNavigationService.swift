@@ -1,5 +1,6 @@
 import CoreMotion
 import Combine
+import UIKit
 
 enum TiltDirection: String {
     case left
@@ -58,6 +59,13 @@ final class TiltNavigationService: ObservableObject {
         baselinePitch = nil
         pendingDirection = .center
         pendingSince = nil
+
+        // Tilting the phone toward its side to register "left"/"right" is
+        // the same gesture that normally rotates the UI to landscape, so
+        // lock to portrait for the duration of tilt navigation.
+        AppDelegate.orientationLock = .portrait
+        UIViewController.attemptRotationToDeviceOrientation()
+
         motionManager.deviceMotionUpdateInterval = 1.0 / 30.0
         motionManager.startDeviceMotionUpdates(using: .xArbitraryZVertical, to: .main) { [weak self] motion, _ in
             guard let self, let motion else { return }
@@ -74,6 +82,9 @@ final class TiltNavigationService: ObservableObject {
         pendingDirection = .center
         pendingSince = nil
         tilt = .center
+
+        AppDelegate.orientationLock = .all
+        UIViewController.attemptRotationToDeviceOrientation()
     }
 
     private func handle(_ motion: CMDeviceMotion) {
