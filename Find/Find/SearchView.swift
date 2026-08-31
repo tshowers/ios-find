@@ -64,7 +64,7 @@ struct SearchView: View {
             }
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
             .padding(.bottom, footerReservedHeight(bottomInset: geometry.safeAreaInsets.bottom))
-            .background(Color(red: 0.96, green: 0.94, blue: 0.98))
+            .background(Theme.background)
             .toolbar(.hidden, for: .navigationBar)
             .alert("Find", isPresented: errorPresented) {
                 Button("OK", role: .cancel) { }
@@ -118,7 +118,7 @@ struct SearchView: View {
                 resultHomeView(screenWidth: screenWidth)
             }
         }
-        .background(Color.white)
+        .background(Theme.cardBackground)
     }
 
     private func searchHomeView(screenWidth: CGFloat) -> some View {
@@ -153,7 +153,7 @@ struct SearchView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
-                    .background(Color(red: 0.13, green: 0.71, blue: 0.93))
+                    .background(Theme.accent)
                     .clipShape(Capsule())
                 }
                 .padding(.horizontal, 24)
@@ -162,7 +162,7 @@ struct SearchView: View {
                 Spacer(minLength: 60)
             }
             .frame(width: screenWidth)
-            .background(Color.white)
+            .background(Theme.cardBackground)
         }
     }
 
@@ -209,15 +209,15 @@ struct SearchView: View {
 
             Text("\(Int(weather.tempF.rounded()))°F")
                 .font(.system(size: 48, weight: .bold))
-                .foregroundStyle(.black)
+                .foregroundStyle(Theme.text)
 
             Text(weather.location)
                 .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(.black)
+                .foregroundStyle(Theme.text)
 
             Text(weather.description.capitalized)
                 .font(.system(size: 16))
-                .foregroundStyle(.black.opacity(0.7))
+                .foregroundStyle(Theme.subtext)
 
             HStack(spacing: 20) {
                 Text("Feels like \(Int(weather.feelsLikeF.rounded()))°")
@@ -225,21 +225,15 @@ struct SearchView: View {
                 Text("Wind \(Int(weather.windMph)) mph")
             }
             .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(.black.opacity(0.6))
+            .foregroundStyle(Theme.subtext)
             .padding(.top, 8)
         }
         .padding(28)
         .frame(maxWidth: .infinity)
-        .background(
-            LinearGradient(
-                colors: [Color(red: 0.85, green: 0.93, blue: 1.0), .white],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
+        .background(Theme.cardBackground)
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color(red: 0.79, green: 0.9, blue: 1.0), lineWidth: 1)
+                .stroke(Theme.border, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .padding(.horizontal, 18)
@@ -261,44 +255,38 @@ struct SearchView: View {
                                     .scaledToFit()
                             default:
                                 Rectangle()
-                                    .fill(Color.black.opacity(0.06))
+                                    .fill(Theme.surface)
                             }
                         }
                         .frame(maxWidth: screenWidth, maxHeight: 300)
                         .frame(width: screenWidth)
-                        .background(Color.black.opacity(0.06))
+                        .background(Theme.surface)
                     }
 
                     VStack(alignment: .leading, spacing: 18) {
                         Text("ANSWER")
                             .font(.system(size: 14, weight: .black))
-                            .foregroundStyle(Color(red: 0.13, green: 0.71, blue: 0.93))
+                            .foregroundStyle(Theme.accent)
 
                         Text(currentTitle)
                             .font(.system(size: 21, weight: .bold))
-                            .foregroundStyle(.black)
+                            .foregroundStyle(Theme.text)
 
                         VStack(alignment: .leading, spacing: 16) {
                             ForEach(answerParagraphs, id: \.self) { paragraph in
                                 Text(paragraph)
                                     .font(.system(size: 16))
-                                    .foregroundStyle(.black.opacity(0.86))
+                                    .foregroundStyle(Theme.subtext)
                                     .lineSpacing(6)
                             }
                         }
                     }
                     .padding(22)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(
-                        LinearGradient(
-                            colors: [Color(red: 0.96, green: 0.99, blue: 1.0), .white],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .background(Theme.cardBackground)
                     .overlay(
                         RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .stroke(Color(red: 0.79, green: 0.9, blue: 1.0), lineWidth: 1)
+                            .stroke(Theme.border, lineWidth: 1)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                     .padding(.horizontal, 18)
@@ -312,17 +300,17 @@ struct SearchView: View {
             .overlay {
                 if viewModel.isLoading {
                     ZStack {
-                        Color.white.opacity(0.72)
+                        Theme.background.opacity(0.72)
                         VStack(spacing: 12) {
                             ProgressView()
                                 .scaleEffect(1.15)
                             Text("Refining result…")
                                 .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(.black.opacity(0.75))
+                                .foregroundStyle(Theme.subtext)
                         }
                         .padding(.horizontal, 22)
                         .padding(.vertical, 18)
-                        .background(Color.white.opacity(0.92))
+                        .background(Theme.cardBackground.opacity(0.92))
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .shadow(color: .black.opacity(0.08), radius: 10, y: 4)
                     }
@@ -351,7 +339,7 @@ struct SearchView: View {
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.black)
+                    .foregroundStyle(Theme.text)
                     .frame(width: 44, height: 44)
             }
             .contentShape(Rectangle())
@@ -368,7 +356,7 @@ struct SearchView: View {
                 HStack(spacing: 5) {
                     ForEach(0..<results.count, id: \.self) { index in
                         Circle()
-                            .fill(index == selectedResultIndex ? Color.gray.opacity(0.8) : Color.gray.opacity(0.35))
+                            .fill(index == selectedResultIndex ? Theme.text : Theme.border)
                             .frame(width: index == selectedResultIndex ? 8 : 6, height: index == selectedResultIndex ? 8 : 6)
                     }
                 }
@@ -380,7 +368,7 @@ struct SearchView: View {
             } label: {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(results.isEmpty || selectedResultIndex >= results.count - 1 ? .black.opacity(0.25) : .black)
+                    .foregroundStyle(results.isEmpty || selectedResultIndex >= results.count - 1 ? Theme.subtext : Theme.text)
                     .frame(width: 44, height: 44)
             }
             .contentShape(Rectangle())
@@ -389,10 +377,10 @@ struct SearchView: View {
         .frame(width: screenWidth)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color(red: 0.95, green: 0.95, blue: 0.95))
+        .background(Theme.surface)
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(Color.black.opacity(0.08))
+                .fill(Theme.border)
                 .frame(height: 1)
         }
     }
@@ -406,7 +394,7 @@ struct SearchView: View {
                     Spacer()
                     Text("\(results.count) found")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.gray)
+                        .foregroundStyle(Theme.subtext)
                 }
 
                 if results.isEmpty {
@@ -439,9 +427,9 @@ struct SearchView: View {
             .padding(.horizontal, 18)
             .padding(.top, 24)
             .padding(.bottom, 150)
-            .background(Color.white)
+            .background(Theme.cardBackground)
         }
-        .background(Color.white)
+        .background(Theme.cardBackground)
     }
 
     private struct GridTile: View {
@@ -476,7 +464,7 @@ struct SearchView: View {
                                     .onAppear { imageFailed = true }
                             default:
                                 Rectangle()
-                                    .fill(Color.black.opacity(0.06))
+                                    .fill(Theme.surface)
                             }
                         }
                         .frame(width: imageSide, height: imageSide)
@@ -486,18 +474,18 @@ struct SearchView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(result.displayUrl)
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(Color(red: 0.13, green: 0.71, blue: 0.93))
+                            .foregroundStyle(Theme.accent)
                             .lineLimit(1)
 
                         Text(result.title)
                             .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(.black)
+                            .foregroundStyle(Theme.text)
                             .multilineTextAlignment(.leading)
                             .lineLimit(showsImage ? 2 : 3)
 
                         Text(result.summary)
                             .font(.system(size: 15))
-                            .foregroundStyle(.black.opacity(0.72))
+                            .foregroundStyle(Theme.subtext)
                             .lineLimit(showsImage ? 3 : 9)
                             .multilineTextAlignment(.leading)
                     }
@@ -505,10 +493,10 @@ struct SearchView: View {
                     .frame(maxHeight: .infinity, alignment: showsImage ? .top : .center)
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
-                .background(Color.white)
+                .background(Theme.cardBackground)
                 .overlay(
                     RoundedRectangle(cornerRadius: 0)
-                        .stroke(isSelected ? Color(red: 0.13, green: 0.71, blue: 0.93) : Color.black.opacity(0.08), lineWidth: isSelected ? 2 : 1)
+                        .stroke(isSelected ? Theme.accent : Theme.border, lineWidth: isSelected ? 2 : 1)
                 )
             }
             .buttonStyle(.plain)
@@ -531,7 +519,7 @@ struct SearchView: View {
                     .padding(.vertical, 8)
                     .overlay(
                         Capsule()
-                            .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                            .stroke(Theme.border, lineWidth: 1)
                     )
                 }
             }
@@ -553,10 +541,10 @@ struct SearchView: View {
                             } label: {
                                 HStack(spacing: 12) {
                                     Image(systemName: "clock")
-                                        .foregroundStyle(.gray)
+                                        .foregroundStyle(Theme.subtext)
                                     Text(item)
                                         .font(.system(size: 16))
-                                        .foregroundStyle(.black)
+                                        .foregroundStyle(Theme.text)
                                     Spacer()
                                 }
                                 .padding(.vertical, 14)
@@ -572,7 +560,7 @@ struct SearchView: View {
         .frame(width: screenWidth - 36, alignment: .topLeading)
         .padding(.horizontal, 18)
         .padding(.top, 24)
-        .background(Color.white)
+        .background(Theme.cardBackground)
     }
 
     private func infoView(screenWidth: CGFloat) -> some View {
@@ -594,12 +582,12 @@ struct SearchView: View {
                 VStack(spacing: 6) {
                     Text("BUILT BY")
                         .font(.system(size: 13, weight: .black))
-                        .foregroundStyle(.gray)
+                        .foregroundStyle(Theme.subtext)
                     Text("Taliferro Tech")
                         .font(.system(size: 22, weight: .bold))
                     Text("Find is part of TODD — the Momentum System designed for teams that move fast and need information faster.")
                         .font(.system(size: 15))
-                        .foregroundStyle(.black.opacity(0.72))
+                        .foregroundStyle(Theme.subtext)
                         .multilineTextAlignment(.center)
 
                     HStack(spacing: 14) {
@@ -607,20 +595,20 @@ struct SearchView: View {
                         Link("taliferro.com", destination: URL(string: "https://taliferro.com")!)
                     }
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color(red: 0.13, green: 0.71, blue: 0.93))
+                    .foregroundStyle(Theme.accent)
                     .padding(.top, 6)
 
                     Text(verbatim: "© \(currentYear) Taliferro Tech. All rights reserved.")
                         .font(.system(size: 12))
-                        .foregroundStyle(.black.opacity(0.45))
+                        .foregroundStyle(Theme.subtext)
                         .padding(.top, 12)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(20)
-                .background(Color.white)
+                .background(Theme.cardBackground)
                 .overlay(
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                        .stroke(Theme.border, lineWidth: 1)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                 .padding(.top, 10)
@@ -633,9 +621,9 @@ struct SearchView: View {
             .padding(.horizontal, 18)
             .padding(.top, 24)
             .padding(.bottom, 120)
-            .background(Color.white)
+            .background(Theme.cardBackground)
         }
-        .background(Color.white)
+        .background(Theme.cardBackground)
     }
 
     private var tiltSection: some View {
@@ -643,7 +631,7 @@ struct SearchView: View {
             if tiltNav.isActive {
                 Text("Tilt navigation is active. Tilt toward a pill to highlight it — hold for 1.5s to open it.")
                     .font(.system(size: 14))
-                    .foregroundStyle(.black.opacity(0.72))
+                    .foregroundStyle(Theme.subtext)
             } else {
                 Button {
                     tiltNav.enable()
@@ -653,17 +641,17 @@ struct SearchView: View {
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
                         .frame(height: 48)
-                        .background(Color(red: 0.13, green: 0.71, blue: 0.93))
+                        .background(Theme.accent)
                         .clipShape(Capsule())
                 }
             }
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white)
+        .background(Theme.cardBackground)
         .overlay(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                .stroke(Theme.border, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .padding(.top, 14)
@@ -674,18 +662,18 @@ struct SearchView: View {
             Spacer()
             Image(systemName: "bookmark")
                 .font(.system(size: 40))
-                .foregroundStyle(.gray)
+                .foregroundStyle(Theme.subtext)
             Text("Bookmark requires sign-in")
                 .font(.system(size: 20, weight: .bold))
             Text("On the full TODD experience, bookmarking saves the result to Knowledge when you’re logged in and subscribed.")
                 .font(.system(size: 15))
-                .foregroundStyle(.black.opacity(0.7))
+                .foregroundStyle(Theme.subtext)
                 .multilineTextAlignment(.center)
                 .frame(width: min(screenWidth - 64, 320))
             Spacer()
         }
         .frame(width: screenWidth)
-        .background(Color.white)
+        .background(Theme.cardBackground)
     }
 
     private func shareView(screenWidth: CGFloat) -> some View {
@@ -696,7 +684,7 @@ struct SearchView: View {
                     .font(.system(size: 22, weight: .bold))
                 Text(url.absoluteString)
                     .font(.system(size: 14))
-                    .foregroundStyle(.gray)
+                    .foregroundStyle(Theme.subtext)
                     .multilineTextAlignment(.center)
                     .frame(width: min(screenWidth - 48, 320))
                 Button("Open Share Sheet") {
@@ -704,12 +692,12 @@ struct SearchView: View {
                 }
                 .font(.system(size: 17, weight: .bold))
                 .frame(width: 220, height: 50)
-                .background(Color(red: 0.13, green: 0.71, blue: 0.93))
+                .background(Theme.accent)
                 .foregroundStyle(.black)
                 .clipShape(Capsule())
                 Text("In TODD, this also offers the path to add the result into Knowledge when your account supports it.")
                     .font(.system(size: 15))
-                    .foregroundStyle(.black.opacity(0.7))
+                    .foregroundStyle(Theme.subtext)
                     .multilineTextAlignment(.center)
                     .frame(width: min(screenWidth - 56, 320))
             } else {
@@ -718,7 +706,7 @@ struct SearchView: View {
             Spacer()
         }
         .frame(width: screenWidth)
-        .background(Color.white)
+        .background(Theme.cardBackground)
     }
 
     private var searchBar: some View {
@@ -726,11 +714,11 @@ struct SearchView: View {
             .font(.system(size: 17))
             .padding(.horizontal, 18)
             .frame(height: 62)
-            .background(Color.white)
+            .background(Theme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(Color.black.opacity(0.12), lineWidth: 1)
+                    .stroke(Theme.border, lineWidth: 1)
             )
             .submitLabel(.search)
             .focused($isSearchFieldFocused)
@@ -757,7 +745,7 @@ struct SearchView: View {
             stickyPillBar(screenWidth: screenWidth)
             bottomBar(screenWidth: screenWidth, bottomInset: bottomInset)
         }
-        .background(Color.white)
+        .background(Theme.cardBackground)
     }
 
     private func bottomBar(screenWidth: CGFloat, bottomInset: CGFloat) -> some View {
@@ -782,14 +770,14 @@ struct SearchView: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.75)
                     }
-                    .foregroundStyle(selectedTab == tab ? Color(red: 0.13, green: 0.71, blue: 0.93) : Color.gray.opacity(0.82))
+                    .foregroundStyle(selectedTab == tab ? Theme.accent : Theme.subtext)
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: 42)
                     .padding(.top, 5)
                     .padding(.bottom, 4)
                     .overlay(alignment: .top) {
                         Rectangle()
-                            .fill(selectedTab == tab ? Color(red: 0.13, green: 0.71, blue: 0.93) : .clear)
+                            .fill(selectedTab == tab ? Theme.accent : .clear)
                             .frame(height: 2)
                     }
                 }
@@ -800,10 +788,10 @@ struct SearchView: View {
         .padding(.top, 4)
         .padding(.bottom, max(10, bottomInset))
         .frame(height: 50 + max(10, bottomInset))
-        .background(Color.white)
+        .background(Theme.cardBackground)
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(Color.black.opacity(0.08))
+                .fill(Theme.border)
                 .frame(height: 1)
         }
     }
@@ -812,7 +800,7 @@ struct SearchView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text(title.uppercased())
                 .font(.system(size: 12, weight: .black))
-                .foregroundStyle(.gray)
+                .foregroundStyle(Theme.subtext)
 
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                 ForEach(products) { product in
@@ -825,28 +813,28 @@ struct SearchView: View {
                                         .scaledToFit()
                                 } else {
                                     RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                        .fill(Color.black.opacity(0.06))
+                                        .fill(Theme.surface)
                                 }
                             }
                             .frame(width: product.wideIcon ? 72 : 36, height: 36)
 
                             Text(product.name)
                                 .font(.system(size: 15, weight: .bold))
-                                .foregroundStyle(.black)
+                                .foregroundStyle(Theme.text)
                                 .multilineTextAlignment(.leading)
 
                             Text(product.body)
                                 .font(.system(size: 13))
-                                .foregroundStyle(.black.opacity(0.62))
+                                .foregroundStyle(Theme.subtext)
                                 .multilineTextAlignment(.leading)
                                 .lineLimit(2)
                         }
                         .padding(14)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.white)
+                        .background(Theme.cardBackground)
                         .overlay(
                             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                                .stroke(Theme.border, lineWidth: 1)
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     }
@@ -866,7 +854,7 @@ struct SearchView: View {
                 .font(.system(size: 15, weight: .black))
                 .foregroundStyle(.black)
                 .frame(width: 32, height: 32)
-                .background(Color(red: 0.13, green: 0.71, blue: 0.93))
+                .background(Theme.accent)
                 .clipShape(Circle())
 
             Text(title)
@@ -874,15 +862,15 @@ struct SearchView: View {
 
             Text(body)
                 .font(.system(size: 15))
-                .foregroundStyle(.black.opacity(0.72))
+                .foregroundStyle(Theme.subtext)
                 .lineSpacing(4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
-        .background(Color.white)
+        .background(Theme.cardBackground)
         .overlay(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                .stroke(Theme.border, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
@@ -891,10 +879,10 @@ struct SearchView: View {
         VStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 28))
-                .foregroundStyle(.gray)
+                .foregroundStyle(Theme.subtext)
             Text(message)
                 .font(.system(size: 15))
-                .foregroundStyle(.gray)
+                .foregroundStyle(Theme.subtext)
         }
         .frame(maxWidth: .infinity, minHeight: 220)
     }
@@ -930,14 +918,14 @@ struct SearchView: View {
                         }
                     }
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(isHighlighted ? Color.white : .black.opacity(0.8))
+                    .foregroundStyle(isHighlighted ? Color.white : Theme.text)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .frame(maxWidth: .infinity, minHeight: 42)
-                    .background(isHighlighted ? Color(red: 0.13, green: 0.71, blue: 0.93) : Color.clear)
+                    .background(isHighlighted ? Theme.accent : Color.clear)
                     .overlay(
                         Rectangle()
-                            .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                            .stroke(Theme.border, lineWidth: 1)
                     )
                 }
                 .disabled(viewModel.isLoading)
@@ -950,10 +938,10 @@ struct SearchView: View {
         pillRow
             .frame(width: screenWidth, alignment: .leading)
             .frame(height: 42)
-            .background(Color.white)
+            .background(Theme.cardBackground)
             .overlay(alignment: .top) {
                 Rectangle()
-                    .fill(Color.black.opacity(0.08))
+                    .fill(Theme.border)
                     .frame(height: 1)
             }
     }
