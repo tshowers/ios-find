@@ -152,7 +152,7 @@ struct SearchView: View {
                 }
                 .frame(width: screenWidth)
                 .padding(.top, 24)
-                .padding(.bottom, 20)
+                .padding(.bottom, 150)
             }
         }
     }
@@ -270,7 +270,7 @@ struct SearchView: View {
                     Spacer(minLength: 18)
                 }
                 .frame(width: screenWidth)
-                .padding(.bottom, 20)
+                .padding(.bottom, 150)
             }
             .overlay {
                 if viewModel.isLoading {
@@ -401,7 +401,7 @@ struct SearchView: View {
             .frame(width: screenWidth - 36, alignment: .topLeading)
             .padding(.horizontal, 18)
             .padding(.top, 24)
-            .padding(.bottom, 16)
+            .padding(.bottom, 150)
             .background(Color.white)
         }
         .background(Color.white)
