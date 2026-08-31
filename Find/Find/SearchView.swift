@@ -120,7 +120,7 @@ struct SearchView: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 18)
 
-                Spacer(minLength: 340)
+                Spacer(minLength: 60)
             }
             .frame(width: screenWidth)
             .background(Color.white)
@@ -474,7 +474,7 @@ struct SearchView: View {
             .frame(width: screenWidth - 36, alignment: .topLeading)
             .padding(.horizontal, 18)
             .padding(.top, 24)
-            .padding(.bottom, 20)
+            .padding(.bottom, 120)
             .background(Color.white)
         }
         .background(Color.white)
