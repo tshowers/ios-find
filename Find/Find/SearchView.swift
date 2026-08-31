@@ -67,7 +67,10 @@ struct SearchView: View {
                 if tiltNav.isActive {
                     tiltDebugReadout
                         .padding(.horizontal, 12)
-                        .padding(.top, geometry.safeAreaInsets.top + 8)
+                        // Clears the result shelf bar (back/forward chevrons
+                        // + title), which sits right at the top of the home
+                        // view - the readout used to overlap and hide it.
+                        .padding(.top, geometry.safeAreaInsets.top + 64)
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
@@ -964,8 +967,10 @@ struct SearchView: View {
                         }
                     }
                     .font(.system(size: 15, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.55)
                     .foregroundStyle(isHighlighted ? Color.white : Theme.text)
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, 10)
                     .padding(.vertical, 10)
                     .frame(maxWidth: .infinity, minHeight: 42)
                     .background(isHighlighted ? Theme.accent : Color.clear)
