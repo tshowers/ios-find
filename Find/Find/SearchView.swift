@@ -380,9 +380,11 @@ struct SearchView: View {
                         GridItem(.flexible(), spacing: 0)
                     ]
 
+                    let columnWidth = (screenWidth - 36) / 2
+
                     LazyVGrid(columns: columns, spacing: 0) {
                         ForEach(0..<results.count, id: \.self) { index in
-                            gridTile(results[index], index: index)
+                            gridTile(results[index], index: index, imageSide: columnWidth)
                         }
                     }
                 }
@@ -397,28 +399,33 @@ struct SearchView: View {
         .background(Color.white)
     }
 
-    private func gridTile(_ result: FindRankedResult, index: Int) -> some View {
+    private func gridTile(_ result: FindRankedResult, index: Int, imageSide: CGFloat) -> some View {
         Button {
             viewModel.select(result)
             selectedTab = .home
             showingSearchScreen = false
         } label: {
             VStack(alignment: .leading, spacing: 0) {
-                if let imageURL = imageURL(for: result) {
-                    AsyncImage(url: imageURL) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
-                        default:
-                            Rectangle()
-                                .fill(Color.black.opacity(0.06))
+                Group {
+                    if let imageURL = imageURL(for: result) {
+                        AsyncImage(url: imageURL) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                            default:
+                                Rectangle()
+                                    .fill(Color.black.opacity(0.06))
+                            }
                         }
+                    } else {
+                        Rectangle()
+                            .fill(Color.black.opacity(0.06))
                     }
-                    .frame(height: 110)
-                    .clipped()
                 }
+                .frame(width: imageSide, height: imageSide)
+                .clipped()
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(result.displayUrl)
@@ -440,9 +447,8 @@ struct SearchView: View {
                 }
                 .padding(12)
             }
-            .frame(maxWidth: .infinity, minHeight: 260, maxHeight: 260, alignment: .topLeading)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
             .background(Color.white)
-            .clipped()
             .overlay(
                 RoundedRectangle(cornerRadius: 0)
                     .stroke(index == selectedResultIndex ? Color(red: 0.13, green: 0.71, blue: 0.93) : Color.black.opacity(0.08), lineWidth: index == selectedResultIndex ? 2 : 1)
