@@ -60,10 +60,19 @@ final class TiltNavigationService: ObservableObject {
         pendingDirection = .center
         pendingSince = nil
 
-        // Tilting the phone toward its side to register "left"/"right" is
-        // the same gesture that normally rotates the UI to landscape, so
-        // lock to portrait for the duration of tilt navigation.
+        // Tilting the phone/iPad toward its side to register "left"/"right"
+        // is the same gesture that normally rotates the UI to landscape, so
+        // lock to portrait for the duration of tilt navigation. On iPad,
+        // supportedInterfaceOrientationsFor: + attemptRotationToDeviceOrientation()
+        // alone is unreliable - requestGeometryUpdate is the API Apple
+        // actually documents for forcing this at runtime.
         AppDelegate.orientationLock = .portrait
+        if let scene = UIApplication.shared.connectedScenes
+            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+            scene.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) { error in
+                print("[Find] tilt nav orientation lock request failed: \(error)")
+            }
+        }
         UIViewController.attemptRotationToDeviceOrientation()
 
         motionManager.deviceMotionUpdateInterval = 1.0 / 30.0
@@ -84,6 +93,10 @@ final class TiltNavigationService: ObservableObject {
         tilt = .center
 
         AppDelegate.orientationLock = .all
+        if let scene = UIApplication.shared.connectedScenes
+            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+            scene.requestGeometryUpdate(.iOS(interfaceOrientations: .all)) { _ in }
+        }
         UIViewController.attemptRotationToDeviceOrientation()
     }
 
