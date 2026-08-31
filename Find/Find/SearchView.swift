@@ -275,13 +275,19 @@ struct SearchView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 18) {
-                        Text("ANSWER")
+                        Text(currentEyebrow)
                             .font(.system(size: 14, weight: .black))
                             .foregroundStyle(Theme.accent)
 
                         Text(currentTitle)
                             .font(.system(size: 21, weight: .bold))
                             .foregroundStyle(Theme.text)
+
+                        if let sourceURL = currentSourceDisplayURL {
+                            Text(sourceURL)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(Theme.subtext)
+                        }
 
                         VStack(alignment: .leading, spacing: 16) {
                             ForEach(answerParagraphs, id: \.self) { paragraph in
@@ -1051,8 +1057,35 @@ struct SearchView: View {
         return nil
     }
 
+    // True only on the single slide the backend originally recommended
+    // (searchResponse.selectedIndex, fixed per search - not the same as
+    // selectedResultIndex, which changes as you page). Mirrors the web
+    // app's isGroundedAnswerSlide: the shared AI-synthesized answer only
+    // belongs on that one slide; every other slide - reached by paging via
+    // the shelf chevrons - shows that individual result's own title/
+    // summary/source, same as the grid shows for it.
+    private var isGroundedAnswerSlide: Bool {
+        guard viewModel.searchResponse?.queryType == .question else { return false }
+        guard let text = viewModel.searchResponse?.answer?.text,
+              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        let originalIndex = viewModel.searchResponse?.selectedIndex ?? 0
+        return selectedResultIndex == originalIndex
+    }
+
+    private var currentEyebrow: String {
+        isGroundedAnswerSlide ? "ANSWER" : "RESULT \(selectedResultIndex + 1)"
+    }
+
+    private var currentSourceDisplayURL: String? {
+        guard !isGroundedAnswerSlide else { return nil }
+        let displayUrl = currentResult?.displayUrl ?? ""
+        return displayUrl.isEmpty ? nil : displayUrl
+    }
+
     private var answerParagraphs: [String] {
-        let candidates = [viewModel.searchResponse?.answer?.text, currentResult?.answer, currentResult?.summary]
+        let candidates: [String?] = isGroundedAnswerSlide ?
+            [viewModel.searchResponse?.answer?.text] :
+            [currentResult?.answer, currentResult?.summary]
         let text = (candidates.compactMap { $0 }.first(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } ) ?? "")
             .replacingOccurrences(of: "\r\n", with: "\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1120,7 +1153,10 @@ struct SearchView: View {
     }
 
     private var currentTitle: String {
-        (viewModel.searchResponse?.query ?? currentResult?.title ?? "Find").trimmingCharacters(in: .whitespacesAndNewlines)
+        if isGroundedAnswerSlide {
+            return (viewModel.searchResponse?.query ?? "Find").trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return (currentResult?.title ?? viewModel.searchResponse?.query ?? "Find").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var currentShareURL: URL? {
