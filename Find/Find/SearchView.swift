@@ -10,6 +10,7 @@ struct SearchView: View {
     @State private var highlightedPill = ""
     @State private var activePill = ""
     @FocusState private var isSearchFieldFocused: Bool
+    @Environment(\.openURL) private var openURL
 
     private enum BottomTab: String, CaseIterable {
         case home = "HOME"
@@ -309,6 +310,17 @@ struct SearchView: View {
                     .padding(.horizontal, 18)
                     .offset(y: heroImageURL == nil ? 18 : -8)
 
+                    referencesSection
+                        .padding(.top, heroImageURL == nil ? 18 : -8)
+
+                    if let resultMetaText {
+                        Text(resultMetaText)
+                            .font(.system(size: 12))
+                            .foregroundStyle(Theme.subtext)
+                            .padding(.horizontal, 18)
+                            .padding(.top, 14)
+                    }
+
                     Spacer(minLength: 18)
                 }
                 .frame(width: screenWidth)
@@ -405,50 +417,85 @@ struct SearchView: View {
     }
 
     private func gridView(screenWidth: CGFloat) -> some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    Text("All results")
-                        .font(.system(size: 22, weight: .bold))
-                    Spacer()
-                    Text("\(results.count) found")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Theme.subtext)
-                }
+        VStack(spacing: 0) {
+            gridHeader(screenWidth: screenWidth)
 
-                if results.isEmpty {
-                    emptyState("Run a search first.")
-                } else {
-                    let columns = [
-                        GridItem(.flexible(), spacing: 0),
-                        GridItem(.flexible(), spacing: 0)
-                    ]
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 16) {
+                    if results.isEmpty {
+                        emptyState("Run a search first.")
+                    } else {
+                        let columns = [
+                            GridItem(.flexible(), spacing: 0),
+                            GridItem(.flexible(), spacing: 0)
+                        ]
 
-                    let columnWidth = (screenWidth - 36) / 2
+                        let columnWidth = (screenWidth - 36) / 2
 
-                    LazyVGrid(columns: columns, spacing: 0) {
-                        ForEach(0..<results.count, id: \.self) { index in
-                            GridTile(
-                                result: results[index],
-                                imageSide: columnWidth,
-                                isSelected: index == selectedResultIndex
-                            ) {
-                                viewModel.select(results[index])
-                                selectedTab = .home
-                                showingSearchScreen = false
+                        LazyVGrid(columns: columns, spacing: 0) {
+                            ForEach(0..<results.count, id: \.self) { index in
+                                GridTile(
+                                    result: results[index],
+                                    imageSide: columnWidth,
+                                    isSelected: index == selectedResultIndex
+                                ) {
+                                    // Find is meant to take you to the thing
+                                    // you found, not into another in-app
+                                    // detail screen - open the actual source.
+                                    if let url = URL(string: results[index].url) {
+                                        openURL(url)
+                                    }
+                                }
                             }
                         }
                     }
                 }
-
+                .frame(width: screenWidth - 36, alignment: .topLeading)
+                .padding(.horizontal, 18)
+                .padding(.top, 16)
+                .padding(.bottom, 150)
+                .background(Theme.cardBackground)
             }
-            .frame(width: screenWidth - 36, alignment: .topLeading)
-            .padding(.horizontal, 18)
-            .padding(.top, 24)
-            .padding(.bottom, 150)
             .background(Theme.cardBackground)
         }
-        .background(Theme.cardBackground)
+    }
+
+    // Fixed above the scrolling grid (not inside the ScrollView), so it
+    // stays put while results scroll underneath - same treatment as the
+    // result shelf. Replaces the old plain "All results" heading with a
+    // back button, matching the web app: tapping it returns to the single
+    // current result instead of just being inert page-title text.
+    private func gridHeader(screenWidth: CGFloat) -> some View {
+        HStack {
+            Button {
+                selectedTab = .home
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(Theme.text)
+                    .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.plain)
+            .contentShape(Rectangle())
+
+            Spacer()
+
+            Text("\(results.count) found")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Theme.subtext)
+
+            Color.clear
+                .frame(width: 44, height: 1)
+        }
+        .frame(width: screenWidth)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Theme.surface)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Theme.border)
+                .frame(height: 1)
+        }
     }
 
     private struct GridTile: View {
@@ -836,6 +883,11 @@ struct SearchView: View {
             ForEach(BottomTab.allCases, id: \.rawValue) { tab in
                 Button {
                     if tab == .home {
+                        // Matches the web app's Home tab (resetToSearch()):
+                        // return to a blank search, not whatever single
+                        // result happened to be showing.
+                        viewModel.resetSearch()
+                        showingSearchScreen = true
                         selectedTab = .home
                     } else if tab == .share, currentShareURL != nil {
                         selectedTab = .share
@@ -1080,6 +1132,81 @@ struct SearchView: View {
         guard !isGroundedAnswerSlide else { return nil }
         let displayUrl = currentResult?.displayUrl ?? ""
         return displayUrl.isEmpty ? nil : displayUrl
+    }
+
+    // Matches the web app's find-question-sources block: the citations
+    // behind the grounded answer, shown only on that slide. Each opens the
+    // actual source, same as everywhere else Find links out.
+    @ViewBuilder
+    private var referencesSection: some View {
+        if isGroundedAnswerSlide, let references = viewModel.searchResponse?.answer?.references, !references.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("References")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(Theme.text)
+                    Spacer()
+                    Text("\(references.count) SOURCES")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.subtext)
+                }
+
+                VStack(spacing: 10) {
+                    ForEach(references) { reference in
+                        Button {
+                            if let url = URL(string: reference.url) {
+                                openURL(url)
+                            }
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(reference.displayUrl)
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundStyle(Theme.accent)
+                                Text(reference.title)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(Theme.text)
+                                    .multilineTextAlignment(.leading)
+                            }
+                            .padding(14)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Theme.cardBackground)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(Theme.border, lineWidth: 1)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .padding(.horizontal, 18)
+        }
+    }
+
+    // Matches the web app's find-result-meta line.
+    private var resultMetaText: String? {
+        guard let timings = viewModel.searchResponse?.timings else { return nil }
+
+        var parts = [String(format: "%.1fs total", Double(timings.totalMs) / 1000)]
+        if timings.candidateCount > 0 {
+            parts.append("\(timings.candidateCount) candidates")
+        }
+        if timings.enrichedCount > 0 {
+            parts.append("\(timings.enrichedCount) pages checked")
+        }
+
+        if currentResult?.isFirstParty == true {
+            parts.append("official Taliferro knowledge")
+        } else if let answer = currentResult?.answer, !answer.isEmpty,
+                  currentResult?.isFirstParty != true,
+                  viewModel.searchResponse?.queryType != .question {
+            parts.append("TODD summary")
+        } else if viewModel.searchResponse?.queryType == .question {
+            parts.append(isGroundedAnswerSlide ? "grounded answer" : "supporting result")
+        }
+
+        return parts.joined(separator: " · ")
     }
 
     private var answerParagraphs: [String] {

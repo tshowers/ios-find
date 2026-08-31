@@ -53,6 +53,7 @@ struct FindRankedResult: Codable, Identifiable, Hashable {
     let sourceType: FindSourceType
     let confidence: Double
     let pills: [String]
+    let isFirstParty: Bool
 }
 
 struct FindSearchHandoff: Codable, Hashable {
