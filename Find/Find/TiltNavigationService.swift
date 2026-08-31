@@ -140,7 +140,11 @@ final class TiltNavigationService: ObservableObject {
         var candidate: TiltDirection = .center
         if abs(rollAccumDeg) > abs(pitchAccumDeg) {
             if abs(rollAccumDeg) > angleThresholdDeg {
-                candidate = rollAccumDeg > 0 ? .left : .right
+                // Verified inverted against a physical device test: a real
+                // right tilt was producing positive rollAccumDeg but firing
+                // .left, so this maps positive -> .right (flipped from the
+                // naive first guess).
+                candidate = rollAccumDeg > 0 ? .right : .left
             }
         } else {
             if abs(pitchAccumDeg) > angleThresholdDeg {
