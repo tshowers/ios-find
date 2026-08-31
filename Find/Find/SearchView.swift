@@ -3,10 +3,15 @@ import NaturalLanguage
 
 struct SearchView: View {
     @StateObject private var viewModel: SearchViewModel
+    @StateObject private var tiltNav = TiltNavigationService()
     @State private var selectedTab: BottomTab = .home
     @State private var showingShareSheet = false
     @State private var showingSearchScreen = true
+    @State private var highlightedPill = ""
+    @State private var tiltHoldTask: Task<Void, Never>?
     @FocusState private var isSearchFieldFocused: Bool
+
+    private let tiltHoldSeconds: TimeInterval = 1.5
 
     private enum BottomTab: String, CaseIterable {
         case home = "HOME"
@@ -73,6 +78,36 @@ struct SearchView: View {
             }
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
+        .onChange(of: tiltNav.tilt) { _, newValue in
+            handleTilt(newValue)
+        }
+        .onDisappear {
+            tiltNav.disable()
+        }
+    }
+
+    private func handleTilt(_ tilt: TiltDirection) {
+        tiltHoldTask?.cancel()
+        tiltHoldTask = nil
+
+        let indexByDirection: [TiltDirection: Int] = [.left: 0, .right: 1, .up: 2, .down: 3]
+        guard let index = indexByDirection[tilt], currentPills.indices.contains(index) else {
+            highlightedPill = ""
+            return
+        }
+
+        let pill = currentPills[index]
+        highlightedPill = pill
+
+        tiltHoldTask = Task {
+            try? await Task.sleep(nanoseconds: UInt64(tiltHoldSeconds * 1_000_000_000))
+            guard !Task.isCancelled, highlightedPill == pill else { return }
+            selectedTab = .home
+            await viewModel.runDrillDown(from: baseQuery, pill: pill)
+            if viewModel.searchResponse != nil {
+                showingSearchScreen = false
+            }
+        }
     }
 
     private func homeView(screenWidth: CGFloat) -> some View {
@@ -589,6 +624,10 @@ struct SearchView: View {
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                 .padding(.top, 10)
+
+                if tiltNav.isSupported {
+                    tiltSection
+                }
             }
             .frame(width: screenWidth - 36, alignment: .topLeading)
             .padding(.horizontal, 18)
@@ -597,6 +636,37 @@ struct SearchView: View {
             .background(Color.white)
         }
         .background(Color.white)
+    }
+
+    private var tiltSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if tiltNav.isActive {
+                Text("Tilt navigation is active. Tilt toward a pill to highlight it — hold for 1.5s to open it.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.black.opacity(0.72))
+            } else {
+                Button {
+                    tiltNav.enable()
+                } label: {
+                    Text("Enable tilt navigation")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .background(Color(red: 0.13, green: 0.71, blue: 0.93))
+                        .clipShape(Capsule())
+                }
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white)
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.black.opacity(0.08), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding(.top, 14)
     }
 
     private func bookmarkView(screenWidth: CGFloat) -> some View {
@@ -829,9 +899,16 @@ struct SearchView: View {
         .frame(maxWidth: .infinity, minHeight: 220)
     }
 
+    private static let tiltDirectionLetters = ["L", "R", "U", "D"]
+
     private var pillRow: some View {
         HStack(spacing: 0) {
-            ForEach(currentPills, id: \.self) { pill in
+            ForEach(Array(currentPills.enumerated()), id: \.element) { index, pill in
+                let isHighlighted = tiltNav.isActive && pill == highlightedPill
+                let label = tiltNav.isActive && Self.tiltDirectionLetters.indices.contains(index)
+                    ? "\(Self.tiltDirectionLetters[index]): \(pill)"
+                    : pill
+
                 Button {
                     selectedTab = .home
                     Task {
@@ -846,17 +923,18 @@ struct SearchView: View {
                             HStack(spacing: 8) {
                                 ProgressView()
                                     .controlSize(.small)
-                                Text(pill)
+                                Text(label)
                             }
                         } else {
-                            Text(pill)
+                            Text(label)
                         }
                     }
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.black.opacity(0.8))
+                    .foregroundStyle(isHighlighted ? Color.white : .black.opacity(0.8))
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .frame(maxWidth: .infinity, minHeight: 42)
+                    .background(isHighlighted ? Color(red: 0.13, green: 0.71, blue: 0.93) : Color.clear)
                     .overlay(
                         Rectangle()
                             .stroke(Color.black.opacity(0.08), lineWidth: 1)
