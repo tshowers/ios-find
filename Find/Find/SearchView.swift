@@ -5,6 +5,7 @@ struct SearchView: View {
     @State private var selectedTab: BottomTab = .home
     @State private var showingShareSheet = false
     @State private var showingSearchScreen = true
+    @FocusState private var isSearchFieldFocused: Bool
 
     private enum BottomTab: String, CaseIterable {
         case home = "HOME"
@@ -95,6 +96,7 @@ struct SearchView: View {
                     .padding(.horizontal, 24)
 
                 Button {
+                    isSearchFieldFocused = false
                     Task {
                         await viewModel.runSearch()
                         if viewModel.searchResponse != nil {
@@ -544,7 +546,9 @@ struct SearchView: View {
                     .stroke(Color.black.opacity(0.12), lineWidth: 1)
             )
             .submitLabel(.search)
+            .focused($isSearchFieldFocused)
             .onSubmit {
+                isSearchFieldFocused = false
                 Task {
                     await viewModel.runSearch()
                     if viewModel.searchResponse != nil {
