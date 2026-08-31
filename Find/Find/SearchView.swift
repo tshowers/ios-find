@@ -8,6 +8,7 @@ struct SearchView: View {
     @State private var showingShareSheet = false
     @State private var showingSearchScreen = true
     @State private var highlightedPill = ""
+    @State private var activePill = ""
     @FocusState private var isSearchFieldFocused: Bool
 
     private enum BottomTab: String, CaseIterable {
@@ -62,6 +63,13 @@ struct SearchView: View {
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
             .padding(.bottom, footerReservedHeight(bottomInset: geometry.safeAreaInsets.bottom))
             .background(Theme.background)
+            .overlay(alignment: .top) {
+                if tiltNav.isActive {
+                    tiltDebugReadout
+                        .padding(.horizontal, 12)
+                        .padding(.top, geometry.safeAreaInsets.top + 8)
+                }
+            }
             .toolbar(.hidden, for: .navigationBar)
             .alert("Find", isPresented: errorPresented) {
                 Button("OK", role: .cancel) { }
@@ -96,6 +104,7 @@ struct SearchView: View {
 
         let pill = currentPills[index]
         highlightedPill = pill
+        activePill = pill
 
         selectedTab = .home
         Task {
@@ -625,11 +634,9 @@ struct SearchView: View {
     private var tiltSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             if tiltNav.isActive {
-                Text("Tilt navigation is active. Flick the device toward a pill to open it.")
+                Text("Tilt navigation is active. Flick the device toward a pill to open it. A live sensor readout is pinned to the top of the screen while this is on.")
                     .font(.system(size: 14))
                     .foregroundStyle(Theme.subtext)
-
-                tiltDebugReadout
             } else {
                 Button {
                     tiltNav.enable()
@@ -674,8 +681,13 @@ struct SearchView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface)
+        .background(Theme.cardBackground)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Theme.border, lineWidth: 1)
+        )
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .shadow(color: .black.opacity(0.25), radius: 12, y: 4)
     }
 
     private func debugRow(_ label: String, _ value: Double) -> some View {
@@ -931,6 +943,7 @@ struct SearchView: View {
                     : pill
 
                 Button {
+                    activePill = pill
                     selectedTab = .home
                     Task {
                         await viewModel.runDrillDown(from: baseQuery, pill: pill)
@@ -940,7 +953,7 @@ struct SearchView: View {
                     }
                 } label: {
                     Group {
-                        if viewModel.isLoading {
+                        if viewModel.isLoading && pill == activePill {
                             HStack(spacing: 8) {
                                 ProgressView()
                                     .controlSize(.small)
