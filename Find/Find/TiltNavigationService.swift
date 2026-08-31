@@ -12,41 +12,51 @@ enum TiltDirection: String {
 
 // Mirrors the web app's FindGyroscopeService: tilt maps to one of the four
 // context pills (left/right/up/down), letting a user drill into a result
-// without touching the screen. CoreMotion's raw device-motion attitude
-// doesn't need the iOS 13 DeviceOrientationEvent-style permission prompt the
-// web version requires in Safari.
+// without touching the screen. CoreMotion's raw device-motion doesn't need
+// the iOS 13 DeviceOrientationEvent-style permission prompt the web version
+// requires in Safari.
 //
-// Unlike the web version (which hardcodes a "held upright" baseline of 45
-// degrees pitch), this calibrates against however the phone is actually
-// being held at the moment tilt navigation is enabled, then measures tilt as
-// the deviation from that baseline - more robust across different holding
-// postures, at the cost of needing to re-enable if the holding posture
-// changes drastically.
+// This detects a *flick* - a fast, deliberate rotation past a threshold -
+// rather than "tilt and hold a pose". That's a deliberate departure from an
+// earlier version that used CMDeviceMotion.attitude (an absolute-orientation
+// estimate) with a calibrated baseline: attitude's roll/pitch axes are fixed
+// to the device's physical shape, so on a larger, often-propped device like
+// iPad (rarely held bolt upright the way a phone is), a "tilt down" gesture
+// could read as more roll than pitch and get misrouted entirely - not just
+// mis-thresholded. rotationRate (the gyroscope's angular velocity, degrees/
+// sec around each device-local axis) sidesteps that: it measures how fast
+// something is turning right now, with no "neutral pose" to calibrate wrong
+// in the first place, and naturally ignores slow postural drift.
 final class TiltNavigationService: ObservableObject {
     @Published private(set) var tilt: TiltDirection = .center
     @Published private(set) var isActive = false
 
+    // Live debug readout (rate + accumulated angle for each axis), published
+    // only so the Info tab can show it while diagnosing sign/axis mapping.
+    @Published private(set) var debugRollRate: Double = 0
+    @Published private(set) var debugPitchRate: Double = 0
+    @Published private(set) var debugRollAccum: Double = 0
+    @Published private(set) var debugPitchAccum: Double = 0
+
     private let motionManager = CMMotionManager()
-    private var baselineRoll: Double?
-    private var baselinePitch: Double?
-    private var smoothedRoll: Double = 0
-    private var smoothedPitch: Double = 0
 
-    // A deliberate, obvious tilt - roughly a third of the way to holding the
-    // phone on its side - not a small wobble from normal handling or
-    // scrolling. Below this, any hand tremor or scroll gesture was
-    // registering as a tilt and thrashing the pill highlight.
-    private let thresholdDegrees: Double = 45
-    // Raw device-motion samples are noisy enough, second to second, that a
-    // single sample crossing the threshold isn't trustworthy on its own -
-    // require the same direction to hold for this long before it commits.
-    private let commitDelaySeconds: TimeInterval = 1.0
-    // Exponential-moving-average weight for the incoming sample; lower is
-    // smoother/slower to react.
-    private let smoothingFactor: Double = 0.12
-
-    private var pendingDirection: TiltDirection = .center
-    private var pendingSince: Date?
+    // A leaky integrator, not a fixed time window: each sample adds
+    // (rate * dt) and the running total decays every sample. That combines
+    // "how fast" and "how far" into one number - a slow drift never
+    // accumulates enough before decaying away, but a fast flick outruns the
+    // decay and crosses the threshold within a few samples.
+    private var rollAccumDeg: Double = 0
+    private var pitchAccumDeg: Double = 0
+    private let decayPerSample: Double = 0.85
+    private let angleThresholdDeg: Double = 20
+    // Ignore new flicks for a moment after one fires, so a single physical
+    // gesture (which spans several samples) doesn't fire repeatedly.
+    private let cooldownSeconds: TimeInterval = 0.8
+    private var lastTriggerAt: Date?
+    // How long a committed tilt stays "active" for the UI (pill highlight)
+    // before resetting to center on its own.
+    private let displaySeconds: TimeInterval = 1.2
+    private var resetWorkItem: DispatchWorkItem?
 
     var isSupported: Bool {
         motionManager.isDeviceMotionAvailable
@@ -55,10 +65,10 @@ final class TiltNavigationService: ObservableObject {
     func enable() {
         guard isSupported, !isActive else { return }
 
-        baselineRoll = nil
-        baselinePitch = nil
-        pendingDirection = .center
-        pendingSince = nil
+        rollAccumDeg = 0
+        pitchAccumDeg = 0
+        lastTriggerAt = nil
+        tilt = .center
 
         // Tilting the phone/iPad toward its side to register "left"/"right"
         // is the same gesture that normally rotates the UI to landscape, so
@@ -86,10 +96,15 @@ final class TiltNavigationService: ObservableObject {
     func disable() {
         motionManager.stopDeviceMotionUpdates()
         isActive = false
-        baselineRoll = nil
-        baselinePitch = nil
-        pendingDirection = .center
-        pendingSince = nil
+        rollAccumDeg = 0
+        pitchAccumDeg = 0
+        debugRollRate = 0
+        debugPitchRate = 0
+        debugRollAccum = 0
+        debugPitchAccum = 0
+        lastTriggerAt = nil
+        resetWorkItem?.cancel()
+        resetWorkItem = nil
         tilt = .center
 
         AppDelegate.orientationLock = .all
@@ -101,59 +116,54 @@ final class TiltNavigationService: ObservableObject {
     }
 
     private func handle(_ motion: CMDeviceMotion) {
-        guard let baselineRoll, let baselinePitch else {
-            self.baselineRoll = motion.attitude.roll
-            self.baselinePitch = motion.attitude.pitch
-            smoothedRoll = motion.attitude.roll
-            smoothedPitch = motion.attitude.pitch
+        let dt = motionManager.deviceMotionUpdateInterval
+        // rotationRate is in the device's own local axes: y is rotation
+        // around the top-to-bottom axis of the screen (rolling side to
+        // side), x is rotation around the left-to-right axis (pitching
+        // forward/back) - same axis pairing as attitude.roll/pitch, just as
+        // an instantaneous rate instead of an absolute angle.
+        let rollRateDeg = motion.rotationRate.y * 180 / .pi
+        let pitchRateDeg = motion.rotationRate.x * 180 / .pi
+
+        rollAccumDeg = rollAccumDeg * decayPerSample + rollRateDeg * dt
+        pitchAccumDeg = pitchAccumDeg * decayPerSample + pitchRateDeg * dt
+
+        debugRollRate = rollRateDeg
+        debugPitchRate = pitchRateDeg
+        debugRollAccum = rollAccumDeg
+        debugPitchAccum = pitchAccumDeg
+
+        if let lastTriggerAt, Date().timeIntervalSince(lastTriggerAt) < cooldownSeconds {
             return
         }
-
-        smoothedRoll += (motion.attitude.roll - smoothedRoll) * smoothingFactor
-        smoothedPitch += (motion.attitude.pitch - smoothedPitch) * smoothingFactor
-
-        let rollDelta = (smoothedRoll - baselineRoll) * 180 / .pi
-        let pitchDelta = (smoothedPitch - baselinePitch) * 180 / .pi
 
         var candidate: TiltDirection = .center
-        if abs(rollDelta) > abs(pitchDelta) {
-            if rollDelta > thresholdDegrees {
-                candidate = .left
-            } else if rollDelta < -thresholdDegrees {
-                candidate = .right
+        if abs(rollAccumDeg) > abs(pitchAccumDeg) {
+            if abs(rollAccumDeg) > angleThresholdDeg {
+                candidate = rollAccumDeg > 0 ? .left : .right
             }
         } else {
-            if pitchDelta > thresholdDegrees {
-                candidate = .up
-            } else if pitchDelta < -thresholdDegrees {
-                candidate = .down
+            if abs(pitchAccumDeg) > angleThresholdDeg {
+                candidate = pitchAccumDeg > 0 ? .up : .down
             }
         }
 
-        // Returning to center cancels immediately - only committing to a new
-        // direction requires the sustained hold, matching "tilt and hold",
-        // not "any flick counts".
-        if candidate == .center {
-            pendingDirection = .center
-            pendingSince = nil
-            if tilt != .center {
-                tilt = .center
-            }
-            return
-        }
+        guard candidate != .center else { return }
 
-        if candidate != pendingDirection {
-            pendingDirection = candidate
-            pendingSince = Date()
-            return
-        }
+        lastTriggerAt = Date()
+        rollAccumDeg = 0
+        pitchAccumDeg = 0
+        fire(candidate)
+    }
 
-        guard let pendingSince, Date().timeIntervalSince(pendingSince) >= commitDelaySeconds else {
-            return
-        }
+    private func fire(_ direction: TiltDirection) {
+        resetWorkItem?.cancel()
+        tilt = direction
 
-        if tilt != candidate {
-            tilt = candidate
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.tilt = .center
         }
+        resetWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + displaySeconds, execute: workItem)
     }
 }

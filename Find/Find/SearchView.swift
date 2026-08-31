@@ -8,10 +8,7 @@ struct SearchView: View {
     @State private var showingShareSheet = false
     @State private var showingSearchScreen = true
     @State private var highlightedPill = ""
-    @State private var tiltHoldTask: Task<Void, Never>?
     @FocusState private var isSearchFieldFocused: Bool
-
-    private let tiltHoldSeconds: TimeInterval = 1.5
 
     private enum BottomTab: String, CaseIterable {
         case home = "HOME"
@@ -86,10 +83,11 @@ struct SearchView: View {
         }
     }
 
+    // TiltNavigationService now detects a flick (fast + far enough), not a
+    // sustained pose, and briefly reports the direction before resetting
+    // itself to .center - so the flick itself is the confirmation, and this
+    // fires the drill-down immediately rather than waiting out a hold timer.
     private func handleTilt(_ tilt: TiltDirection) {
-        tiltHoldTask?.cancel()
-        tiltHoldTask = nil
-
         let indexByDirection: [TiltDirection: Int] = [.left: 0, .right: 1, .up: 2, .down: 3]
         guard let index = indexByDirection[tilt], currentPills.indices.contains(index) else {
             highlightedPill = ""
@@ -99,10 +97,8 @@ struct SearchView: View {
         let pill = currentPills[index]
         highlightedPill = pill
 
-        tiltHoldTask = Task {
-            try? await Task.sleep(nanoseconds: UInt64(tiltHoldSeconds * 1_000_000_000))
-            guard !Task.isCancelled, highlightedPill == pill else { return }
-            selectedTab = .home
+        selectedTab = .home
+        Task {
             await viewModel.runDrillDown(from: baseQuery, pill: pill)
             if viewModel.searchResponse != nil {
                 showingSearchScreen = false
@@ -629,9 +625,11 @@ struct SearchView: View {
     private var tiltSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             if tiltNav.isActive {
-                Text("Tilt navigation is active. Tilt toward a pill to highlight it — hold for 1.5s to open it.")
+                Text("Tilt navigation is active. Flick the device toward a pill to open it.")
                     .font(.system(size: 14))
                     .foregroundStyle(Theme.subtext)
+
+                tiltDebugReadout
             } else {
                 Button {
                     tiltNav.enable()
@@ -655,6 +653,41 @@ struct SearchView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .padding(.top, 14)
+    }
+
+    // Live sensor readout while tuning tilt navigation - shows raw rate and
+    // the leaky-integrator accumulation for each axis, plus whatever
+    // direction most recently fired, so the actual numbers behind a tilt
+    // gesture can be read directly off the screen instead of guessed at.
+    private var tiltDebugReadout: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("DEBUG")
+                .font(.system(size: 11, weight: .black))
+                .foregroundStyle(Theme.subtext)
+            debugRow("roll rate", tiltNav.debugRollRate)
+            debugRow("roll accum", tiltNav.debugRollAccum)
+            debugRow("pitch rate", tiltNav.debugPitchRate)
+            debugRow("pitch accum", tiltNav.debugPitchAccum)
+            Text("last fired: \(tiltNav.tilt.rawValue)")
+                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .foregroundStyle(Theme.accent)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func debugRow(_ label: String, _ value: Double) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.subtext)
+            Spacer()
+            Text(String(format: "%.1f°", value))
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundStyle(Theme.text)
+        }
     }
 
     private func bookmarkView(screenWidth: CGFloat) -> some View {
