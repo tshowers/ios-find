@@ -405,27 +405,24 @@ struct SearchView: View {
             selectedTab = .home
             showingSearchScreen = false
         } label: {
+            let tileImageURL = imageURL(for: result)
+
             VStack(alignment: .leading, spacing: 0) {
-                Group {
-                    if let imageURL = imageURL(for: result) {
-                        AsyncImage(url: imageURL) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .scaledToFill()
-                            default:
-                                Rectangle()
-                                    .fill(Color.black.opacity(0.06))
-                            }
+                if let tileImageURL {
+                    AsyncImage(url: tileImageURL) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        default:
+                            Rectangle()
+                                .fill(Color.black.opacity(0.06))
                         }
-                    } else {
-                        Rectangle()
-                            .fill(Color.black.opacity(0.06))
                     }
+                    .frame(width: imageSide, height: imageSide)
+                    .clipped()
                 }
-                .frame(width: imageSide, height: imageSide)
-                .clipped()
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(result.displayUrl)
@@ -446,6 +443,7 @@ struct SearchView: View {
                         .multilineTextAlignment(.leading)
                 }
                 .padding(12)
+                .frame(maxHeight: .infinity, alignment: tileImageURL == nil ? .center : .top)
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .background(Color.white)
