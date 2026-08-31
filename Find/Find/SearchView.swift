@@ -130,6 +130,86 @@ struct SearchView: View {
     }
 
     private func resultHomeView(screenWidth: CGFloat) -> some View {
+        Group {
+            if isWeatherMode {
+                weatherHomeView(screenWidth: screenWidth)
+            } else {
+                answerHomeView(screenWidth: screenWidth)
+            }
+        }
+    }
+
+    private func weatherHomeView(screenWidth: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            resultShelf(screenWidth: screenWidth)
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    if let weather = viewModel.searchResponse?.weather {
+                        weatherCard(weather)
+                    }
+                    Spacer(minLength: 18)
+                }
+                .frame(width: screenWidth)
+                .padding(.top, 24)
+                .padding(.bottom, 20)
+            }
+        }
+    }
+
+    private func weatherCard(_ weather: FindWeatherInfo) -> some View {
+        VStack(spacing: 10) {
+            AsyncImage(url: URL(string: weather.iconUrl)) { phase in
+                if let image = phase.image {
+                    image
+                        .resizable()
+                        .scaledToFit()
+                } else {
+                    Color.clear
+                }
+            }
+            .frame(width: 90, height: 90)
+
+            Text("\(Int(weather.tempF.rounded()))°F")
+                .font(.system(size: 48, weight: .bold))
+                .foregroundStyle(.black)
+
+            Text(weather.location)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(.black)
+
+            Text(weather.description.capitalized)
+                .font(.system(size: 16))
+                .foregroundStyle(.black.opacity(0.7))
+
+            HStack(spacing: 20) {
+                Text("Feels like \(Int(weather.feelsLikeF.rounded()))°")
+                Text("Humidity \(Int(weather.humidity))%")
+                Text("Wind \(Int(weather.windMph)) mph")
+            }
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(.black.opacity(0.6))
+            .padding(.top, 8)
+        }
+        .padding(28)
+        .frame(maxWidth: .infinity)
+        .background(
+            LinearGradient(
+                colors: [Color(red: 0.85, green: 0.93, blue: 1.0), .white],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color(red: 0.79, green: 0.9, blue: 1.0), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .padding(.horizontal, 18)
+        .padding(.top, 18)
+    }
+
+    private func answerHomeView(screenWidth: CGFloat) -> some View {
         VStack(spacing: 0) {
             resultShelf(screenWidth: screenWidth)
 
@@ -713,41 +793,39 @@ struct SearchView: View {
     }
 
     private var pillRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 0) {
-                ForEach(currentPills, id: \.self) { pill in
-                    Button {
-                        selectedTab = .home
-                        Task {
-                            await viewModel.runDrillDown(from: baseQuery, pill: pill)
-                            if viewModel.searchResponse != nil {
-                                showingSearchScreen = false
-                            }
+        HStack(spacing: 0) {
+            ForEach(currentPills, id: \.self) { pill in
+                Button {
+                    selectedTab = .home
+                    Task {
+                        await viewModel.runDrillDown(from: baseQuery, pill: pill)
+                        if viewModel.searchResponse != nil {
+                            showingSearchScreen = false
                         }
-                    } label: {
-                        Group {
-                            if viewModel.isLoading {
-                                HStack(spacing: 8) {
-                                    ProgressView()
-                                        .controlSize(.small)
-                                    Text(pill)
-                                }
-                            } else {
+                    }
+                } label: {
+                    Group {
+                        if viewModel.isLoading {
+                            HStack(spacing: 8) {
+                                ProgressView()
+                                    .controlSize(.small)
                                 Text(pill)
                             }
+                        } else {
+                            Text(pill)
                         }
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.black.opacity(0.8))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .frame(minWidth: 98)
-                        .overlay(
-                            Rectangle()
-                                .stroke(Color.black.opacity(0.08), lineWidth: 1)
-                        )
                     }
-                    .disabled(viewModel.isLoading)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.black.opacity(0.8))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, minHeight: 42)
+                    .overlay(
+                        Rectangle()
+                            .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                    )
                 }
+                .disabled(viewModel.isLoading)
             }
         }
         .opacity(viewModel.isLoading ? 0.82 : 1)
@@ -763,6 +841,10 @@ struct SearchView: View {
                     .fill(Color.black.opacity(0.08))
                     .frame(height: 1)
             }
+    }
+
+    private var isWeatherMode: Bool {
+        viewModel.searchResponse?.queryType == .weather
     }
 
     private var results: [FindRankedResult] {
@@ -785,7 +867,8 @@ struct SearchView: View {
     }
 
     private var answerParagraphs: [String] {
-        let text = (viewModel.searchResponse?.answer?.text ?? currentResult?.answer ?? currentResult?.summary ?? "")
+        let candidates = [viewModel.searchResponse?.answer?.text, currentResult?.answer, currentResult?.summary]
+        let text = (candidates.compactMap { $0 }.first(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } ) ?? "")
             .replacingOccurrences(of: "\r\n", with: "\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         if text.isEmpty { return [] }

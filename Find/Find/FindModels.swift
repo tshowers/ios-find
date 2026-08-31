@@ -4,6 +4,18 @@ enum FindQueryType: String, Codable {
     case entity
     case question
     case person
+    case weather
+}
+
+struct FindWeatherInfo: Codable, Hashable {
+    let location: String
+    let tempF: Double
+    let feelsLikeF: Double
+    let condition: String
+    let description: String
+    let iconUrl: String
+    let humidity: Double
+    let windMph: Double
 }
 
 enum FindSourceType: String, Codable {
@@ -64,6 +76,7 @@ struct FindSearchResponse: Codable, Hashable {
     let queryType: FindQueryType
     let handoff: FindSearchHandoff?
     let answer: FindAnswerBlock?
+    let weather: FindWeatherInfo?
     let results: [FindRankedResult]
     let selectedIndex: Int
     let timings: FindSearchTimings?
