@@ -164,6 +164,7 @@ struct SearchView: View {
                     .background(Theme.accent)
                     .clipShape(Capsule())
                 }
+                .buttonStyle(.plain)
                 .padding(.horizontal, 24)
                 .padding(.top, 18)
 
@@ -350,6 +351,7 @@ struct SearchView: View {
                     .foregroundStyle(Theme.text)
                     .frame(width: 44, height: 44)
             }
+            .buttonStyle(.plain)
             .contentShape(Rectangle())
 
             VStack(spacing: 4) {
@@ -379,6 +381,7 @@ struct SearchView: View {
                     .foregroundStyle(results.isEmpty || selectedResultIndex >= results.count - 1 ? Theme.subtext : Theme.text)
                     .frame(width: 44, height: 44)
             }
+            .buttonStyle(.plain)
             .contentShape(Rectangle())
             .disabled(results.isEmpty || selectedResultIndex >= results.count - 1)
         }
@@ -521,6 +524,7 @@ struct SearchView: View {
                     Button("Clear") {
                         viewModel.clearHistory()
                     }
+                    .buttonStyle(.plain)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.red)
                     .padding(.horizontal, 16)
@@ -652,6 +656,7 @@ struct SearchView: View {
                         .background(Theme.accent)
                         .clipShape(Capsule())
                 }
+                .buttonStyle(.plain)
             }
         }
         .padding(18)
@@ -738,6 +743,7 @@ struct SearchView: View {
                 Button("Open Share Sheet") {
                     showingShareSheet = true
                 }
+                .buttonStyle(.plain)
                 .font(.system(size: 17, weight: .bold))
                 .frame(width: 220, height: 50)
                 .background(Theme.accent)
@@ -829,6 +835,7 @@ struct SearchView: View {
                             .frame(height: 2)
                     }
                 }
+                .buttonStyle(.plain)
             }
         }
         .frame(width: screenWidth)
@@ -979,6 +986,7 @@ struct SearchView: View {
                             .stroke(Theme.border, lineWidth: 1)
                     )
                 }
+                .buttonStyle(.plain)
                 .disabled(viewModel.isLoading)
             }
         }
