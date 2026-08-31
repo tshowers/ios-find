@@ -148,7 +148,10 @@ final class TiltNavigationService: ObservableObject {
             }
         } else {
             if abs(pitchAccumDeg) > angleThresholdDeg {
-                candidate = pitchAccumDeg > 0 ? .up : .down
+                // Verified inverted the same way as roll: a physical up tilt
+                // fired the .down pill and vice versa, so positive maps to
+                // .down instead of the naive first guess of .up.
+                candidate = pitchAccumDeg > 0 ? .down : .up
             }
         }
 
