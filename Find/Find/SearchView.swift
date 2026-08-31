@@ -384,7 +384,15 @@ struct SearchView: View {
 
                     LazyVGrid(columns: columns, spacing: 0) {
                         ForEach(0..<results.count, id: \.self) { index in
-                            gridTile(results[index], index: index, imageSide: columnWidth)
+                            GridTile(
+                                result: results[index],
+                                imageSide: columnWidth,
+                                isSelected: index == selectedResultIndex
+                            ) {
+                                viewModel.select(results[index])
+                                selectedTab = .home
+                                showingSearchScreen = false
+                            }
                         }
                     }
                 }
@@ -399,60 +407,75 @@ struct SearchView: View {
         .background(Color.white)
     }
 
-    private func gridTile(_ result: FindRankedResult, index: Int, imageSide: CGFloat) -> some View {
-        Button {
-            viewModel.select(result)
-            selectedTab = .home
-            showingSearchScreen = false
-        } label: {
-            let tileImageURL = imageURL(for: result)
+    private struct GridTile: View {
+        let result: FindRankedResult
+        let imageSide: CGFloat
+        let isSelected: Bool
+        let onSelect: () -> Void
 
-            VStack(alignment: .leading, spacing: 0) {
-                if let tileImageURL {
-                    AsyncImage(url: tileImageURL) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
-                        default:
-                            Rectangle()
-                                .fill(Color.black.opacity(0.06))
-                        }
-                    }
-                    .frame(width: imageSide, height: imageSide)
-                    .clipped()
-                }
+        @State private var imageFailed = false
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(result.displayUrl)
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(Color(red: 0.13, green: 0.71, blue: 0.93))
-                        .lineLimit(1)
-
-                    Text(result.title)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(.black)
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(2)
-
-                    Text(result.summary)
-                        .font(.system(size: 15))
-                        .foregroundStyle(.black.opacity(0.72))
-                        .lineLimit(3)
-                        .multilineTextAlignment(.leading)
-                }
-                .padding(12)
-                .frame(maxHeight: .infinity, alignment: tileImageURL == nil ? .center : .top)
-            }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .background(Color.white)
-            .overlay(
-                RoundedRectangle(cornerRadius: 0)
-                    .stroke(index == selectedResultIndex ? Color(red: 0.13, green: 0.71, blue: 0.93) : Color.black.opacity(0.08), lineWidth: index == selectedResultIndex ? 2 : 1)
-            )
+        private var imageURL: URL? {
+            guard !result.imageUrl.isEmpty else { return nil }
+            return URL(string: result.imageUrl)
         }
-        .buttonStyle(.plain)
+
+        private var showsImage: Bool {
+            imageURL != nil && !imageFailed
+        }
+
+        var body: some View {
+            Button(action: onSelect) {
+                VStack(alignment: .leading, spacing: 0) {
+                    if showsImage, let imageURL {
+                        AsyncImage(url: imageURL) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                            case .failure:
+                                Color.clear
+                                    .onAppear { imageFailed = true }
+                            default:
+                                Rectangle()
+                                    .fill(Color.black.opacity(0.06))
+                            }
+                        }
+                        .frame(width: imageSide, height: imageSide)
+                        .clipped()
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(result.displayUrl)
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Color(red: 0.13, green: 0.71, blue: 0.93))
+                            .lineLimit(1)
+
+                        Text(result.title)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(.black)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(2)
+
+                        Text(result.summary)
+                            .font(.system(size: 15))
+                            .foregroundStyle(.black.opacity(0.72))
+                            .lineLimit(3)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .padding(12)
+                    .frame(maxHeight: .infinity, alignment: showsImage ? .top : .center)
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .background(Color.white)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 0)
+                        .stroke(isSelected ? Color(red: 0.13, green: 0.71, blue: 0.93) : Color.black.opacity(0.08), lineWidth: isSelected ? 2 : 1)
+                )
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     private func historyView(screenWidth: CGFloat) -> some View {
@@ -932,11 +955,6 @@ struct SearchView: View {
 
     private var currentTitle: String {
         (viewModel.searchResponse?.query ?? currentResult?.title ?? "Find").trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private func imageURL(for result: FindRankedResult) -> URL? {
-        guard !result.imageUrl.isEmpty else { return nil }
-        return URL(string: result.imageUrl)
     }
 
     private var currentShareURL: URL? {
