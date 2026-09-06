@@ -223,7 +223,7 @@ struct SearchView: View {
                 .font(.system(size: 48, weight: .bold))
                 .foregroundStyle(Theme.text)
 
-            Text(weather.location)
+            Text(weather.postalCode.map { "\(weather.location) \($0)" } ?? weather.location)
                 .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(Theme.text)
 
@@ -239,6 +239,43 @@ struct SearchView: View {
             .font(.system(size: 13, weight: .semibold))
             .foregroundStyle(Theme.subtext)
             .padding(.top, 8)
+
+            if weather.highF != nil || weather.lowF != nil {
+                HStack(spacing: 16) {
+                    if let highF = weather.highF {
+                        Text("High \(Int(highF.rounded()))°")
+                    }
+                    if let lowF = weather.lowF {
+                        Text("Low \(Int(lowF.rounded()))°")
+                    }
+                }
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(Theme.text)
+                .padding(.top, 6)
+            }
+
+            if let forecast = weather.forecast, !forecast.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("FORECAST")
+                        .font(.system(size: 12, weight: .heavy))
+                        .tracking(1)
+                        .foregroundStyle(Theme.text)
+                        .padding(.bottom, 8)
+
+                    ForEach(Array(forecast.enumerated()), id: \.offset) { index, day in
+                        forecastRow(day, showsDivider: index < forecast.count - 1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 22)
+            }
+
+            if let updatedAt = weather.updatedAt, let formatted = Self.formatUpdatedAt(updatedAt) {
+                Text("Updated \(formatted)")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.subtext)
+                    .padding(.top, 14)
+            }
         }
         .padding(28)
         .frame(maxWidth: .infinity)
@@ -250,6 +287,67 @@ struct SearchView: View {
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .padding(.horizontal, 18)
         .padding(.top, 18)
+    }
+
+    private func forecastRow(_ day: FindWeatherForecastDay, showsDivider: Bool) -> some View {
+        HStack(spacing: 10) {
+            Text(day.label.isEmpty ? day.date : day.label)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(Theme.text)
+                .frame(width: 92, alignment: .leading)
+
+            HStack(spacing: 6) {
+                if let iconUrlString = day.iconUrl, let iconURL = URL(string: iconUrlString) {
+                    AsyncImage(url: iconURL) { phase in
+                        if let image = phase.image {
+                            image.resizable().scaledToFit()
+                        } else {
+                            Color.clear
+                        }
+                    }
+                    .frame(width: 24, height: 24)
+                }
+
+                Text(day.description?.isEmpty == false ? day.description! : day.condition)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.subtext)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 8) {
+                if let highF = day.highF {
+                    Text("\(Int(highF.rounded()))°")
+                        .fontWeight(.bold)
+                        .foregroundStyle(Theme.text)
+                }
+                if let lowF = day.lowF {
+                    Text("\(Int(lowF.rounded()))°")
+                        .foregroundStyle(Theme.subtext)
+                }
+            }
+            .font(.system(size: 14))
+        }
+        .padding(.vertical, 10)
+        .overlay(alignment: .bottom) {
+            if showsDivider {
+                Rectangle()
+                    .fill(Theme.border)
+                    .frame(height: 1)
+            }
+        }
+    }
+
+    private static let updatedAtFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter
+    }()
+
+    private static func formatUpdatedAt(_ iso: String) -> String? {
+        guard let date = ISO8601DateFormatter().date(from: iso) else { return nil }
+        return updatedAtFormatter.string(from: date)
     }
 
     private func answerHomeView(screenWidth: CGFloat) -> some View {
