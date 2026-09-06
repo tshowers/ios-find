@@ -23,14 +23,37 @@ final class FindAPIClient {
         self.config = config
     }
 
-    func search(query: String, context: String? = nil, maxResults: Int = 10) async throws -> FindSearchResponse {
+    func search(
+        query: String,
+        context: String? = nil,
+        maxResults: Int = 10,
+        latitude: Double? = nil,
+        longitude: Double? = nil
+    ) async throws -> FindSearchResponse {
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let payload = FindSearchRequest(
-            query: query.trimmingCharacters(in: .whitespacesAndNewlines),
+            query: trimmedQuery,
             context: context?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
-            maxResults: min(max(maxResults, 1), 10)
+            maxResults: min(max(maxResults, 1), 10),
+            postalCode: Self.extractPostalCode(from: trimmedQuery),
+            latitude: latitude,
+            longitude: longitude
         )
 
         return try await post(path: "find/search", payload: payload, responseType: FindSearchResponse.self)
+    }
+
+    // Mirrors extractPostalCode() in the web app's find-experience.service.ts
+    // so a bare ZIP in the query text (e.g. "weather 98106") reaches the
+    // backend's weather fast-path the same way regardless of which client
+    // sent it.
+    private static func extractPostalCode(from query: String) -> String? {
+        let pattern = #"(?:^|\s)(\d{5})(?:-\d{4})?(?=\s|$)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let range = NSRange(query.startIndex..., in: query)
+        guard let match = regex.firstMatch(in: query, range: range),
+              let zipRange = Range(match.range(at: 1), in: query) else { return nil }
+        return String(query[zipRange])
     }
 
     func summarize(query: String, url: String, title: String) async throws -> String {
