@@ -37,19 +37,19 @@ enum FindProducts {
             name: "Ask TODD",
             body: "Get unstuck with a clear next move.",
             iconURL: URL(string: "\(assetBase)/todd/TODD-icon.png")!,
-            ctaURL: URL(string: "https://todd.taliferro.tech/ask-todd")!
+            ctaURL: URL(string: "https://ask.taliferro.tech")!
         ),
         FindProductLink(
             name: "Lead Vault",
             body: "Search verified business contacts.",
             iconURL: URL(string: "\(assetBase)/lead-vault/logo.png")!,
-            ctaURL: URL(string: "https://todd.taliferro.tech/lead-vault")!
+            ctaURL: URL(string: "https://lead-vault.taliferro.tech")!
         ),
         FindProductLink(
             name: "Maya",
             body: "On-call marketing advice.",
             iconURL: URL(string: "\(assetBase)/maya/logo.png")!,
-            ctaURL: URL(string: "https://todd.taliferro.tech/marketing-director")!,
+            ctaURL: URL(string: "https://maya.taliferro.tech")!,
             wideIcon: true
         ),
         FindProductLink(
@@ -65,13 +65,13 @@ enum FindProducts {
             name: "Pulse",
             body: "Capture live feedback & sentiment.",
             iconURL: URL(string: "\(assetBase)/pulse/pulse.png")!,
-            ctaURL: URL(string: "https://todd.taliferro.tech/pulse/app")!
+            ctaURL: URL(string: "https://pulse.taliferro.tech")!
         ),
         FindProductLink(
             name: "Network",
             body: "Relationship & contact intelligence.",
             iconURL: URL(string: "\(assetBase)/network/logo.png")!,
-            ctaURL: URL(string: "https://todd.taliferro.tech/network/app")!
+            ctaURL: URL(string: "https://network.taliferro.tech")!
         ),
         FindProductLink(
             name: "Outreach",
