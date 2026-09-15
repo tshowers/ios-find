@@ -44,6 +44,15 @@ enum Theme {
     // Same value both modes, matching --tl-blue in the web app's styles.css.
     static let accent = Color(red: 0.0, green: 0.749, blue: 1.0)         // #00bfff
 
+    // Quick-action tile colors, matching the web app's find-home.component.css
+    // .find-quick-action--* rules exactly (same in both light and dark mode there).
+    static let quickActionNews = Color(red: 0.937, green: 0.267, blue: 0.267)        // #ef4444
+    static let quickActionWeather = Color(red: 0.086, green: 0.514, blue: 0.910)     // #1683e8
+    static let quickActionSports = Color(red: 0.086, green: 0.655, blue: 0.396)      // #16a765
+    static let quickActionConversion = Color(red: 0.486, green: 0.227, blue: 0.929)  // #7c3aed
+    static let quickActionRestaurants = Color(red: 0.898, green: 0.608, blue: 0.031) // #e59b08
+    static let quickActionEvents = Color(red: 0.031, green: 0.569, blue: 0.698)      // #0891b2
+
     private static func adaptive(light: UIColor, dark: UIColor) -> Color {
         Color(UIColor { traits in
             traits.userInterfaceStyle == .dark ? dark : light

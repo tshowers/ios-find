@@ -28,7 +28,6 @@ struct SearchView: View {
         case grid = "GRID"
         case history = "HISTORY"
         case info = "INFO"
-        case bookmark = "BOOKMARK"
         case share = "SHARE"
 
         var systemImage: String {
@@ -37,7 +36,6 @@ struct SearchView: View {
             case .grid: return "square.grid.2x2"
             case .history: return "arrow.counterclockwise"
             case .info: return "info.circle.fill"
-            case .bookmark: return "bookmark"
             case .share: return "square.and.arrow.up"
             }
         }
@@ -48,6 +46,27 @@ struct SearchView: View {
         let label: String
         var id: String { value }
     }
+
+    private struct FindQuickAction: Identifiable {
+        let label: String
+        let systemImage: String
+        let color: Color
+        let query: String
+        var disabled = false
+        var id: String { label }
+    }
+
+    // Mirrors the web app's find-home.component.ts `quickActions` array
+    // exactly - same labels, order, colors (via Theme.quickAction*), and
+    // queries.
+    private static let quickActions: [FindQuickAction] = [
+        FindQuickAction(label: "News", systemImage: "newspaper.fill", color: Theme.quickActionNews, query: "Today's News"),
+        FindQuickAction(label: "Weather", systemImage: "sun.max.fill", color: Theme.quickActionWeather, query: "weather"),
+        FindQuickAction(label: "Sports", systemImage: "soccerball", color: Theme.quickActionSports, query: "sports news"),
+        FindQuickAction(label: "Conversion", systemImage: "arrow.left.arrow.right", color: Theme.quickActionConversion, query: "100 USD to EUR"),
+        FindQuickAction(label: "Restaurants", systemImage: "fork.knife", color: Theme.quickActionRestaurants, query: "restaurants near me"),
+        FindQuickAction(label: "Events", systemImage: "calendar", color: Theme.quickActionEvents, query: "events near me", disabled: true),
+    ]
 
     init(viewModel: SearchViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -66,8 +85,6 @@ struct SearchView: View {
                         historyView(screenWidth: geometry.size.width)
                     case .info:
                         infoView(screenWidth: geometry.size.width)
-                    case .bookmark:
-                        bookmarkView(screenWidth: geometry.size.width)
                     case .share:
                         shareView(screenWidth: geometry.size.width)
                     }
@@ -161,13 +178,7 @@ struct SearchView: View {
                     .padding(.horizontal, 24)
 
                 Button {
-                    isSearchFieldFocused = false
-                    Task {
-                        await viewModel.runSearch()
-                        if viewModel.searchResponse != nil {
-                            showingSearchScreen = false
-                        }
-                    }
+                    runSearchFromHome(viewModel.query)
                 } label: {
                     Group {
                         if viewModel.isLoading {
@@ -188,10 +199,53 @@ struct SearchView: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 18)
 
+                quickActionsGrid
+                    .padding(.horizontal, 24)
+                    .padding(.top, 10)
+
                 Spacer(minLength: 60)
             }
             .frame(width: screenWidth)
             .background(Theme.cardBackground)
+        }
+    }
+
+    private var quickActionsGrid: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+            ForEach(Self.quickActions) { action in
+                Button {
+                    runSearchFromHome(action.query)
+                } label: {
+                    VStack(spacing: 5) {
+                        Image(systemName: action.systemImage)
+                            .font(.system(size: 20, weight: .semibold))
+                        Text(action.label)
+                            .font(.system(size: 13, weight: .bold))
+                        if action.disabled {
+                            Text("Coming soon")
+                                .font(.system(size: 9, weight: .semibold))
+                        }
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, minHeight: 84)
+                    .background(action.color)
+                    .opacity(action.disabled ? 0.52 : 1)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .disabled(action.disabled || viewModel.isLoading)
+            }
+        }
+    }
+
+    private func runSearchFromHome(_ query: String) {
+        isSearchFieldFocused = false
+        viewModel.query = query
+        Task {
+            await viewModel.runSearch()
+            if viewModel.searchResponse != nil {
+                showingSearchScreen = false
+            }
         }
     }
 
@@ -1019,11 +1073,6 @@ struct SearchView: View {
                 infoCard("03", "People → Lead Vault", "Find shows the best web results first. When a query looks like a person, buyer, or prospect, you can continue the search in Lead Vault when you’re ready.")
                 infoCard("04", "The philosophy", "Most search tools optimize for clicks. Find optimizes for answers. We believe the best search experience ends with you knowing something — not choosing between 10 links that might.")
 
-                productsSection("More from Taliferro Tech", FindProducts.moreFromTaliferroTech)
-                    .padding(.top, 8)
-
-                productsSection("Momentum system", FindProducts.momentumSystem)
-
                 VStack(spacing: 6) {
                     Text("BUILT BY")
                         .font(.system(size: 13, weight: .black))
@@ -1043,9 +1092,11 @@ struct SearchView: View {
                     .foregroundStyle(Theme.accent)
                     .padding(.top, 6)
 
-                    Text(verbatim: "© \(currentYear) Taliferro Tech. All rights reserved.")
+                    Text(LocalizedStringKey("© \(currentYear) TODD. Site design [Taliferro Group](https://taliferro.com/website-development). Taliferro Is Registered In The U.S. Patent And Trademark Office. All rights reserved. | [Contact](https://taliferro.com/contact.html)"))
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.subtext)
+                        .multilineTextAlignment(.center)
+                        .tint(Theme.accent)
                         .padding(.top, 12)
 
                     if let appVersionLabel {
@@ -1170,25 +1221,6 @@ struct SearchView: View {
         }
     }
     #endif
-
-    private func bookmarkView(screenWidth: CGFloat) -> some View {
-        VStack(spacing: 16) {
-            Spacer()
-            Image(systemName: "bookmark")
-                .font(.system(size: 40))
-                .foregroundStyle(Theme.subtext)
-            Text("Bookmark requires sign-in")
-                .font(.system(size: 20, weight: .bold))
-            Text("On the full TODD experience, bookmarking saves the result to Knowledge when you’re logged in and subscribed.")
-                .font(.system(size: 15))
-                .foregroundStyle(Theme.subtext)
-                .multilineTextAlignment(.center)
-                .frame(width: min(screenWidth - 64, 320))
-            Spacer()
-        }
-        .frame(width: screenWidth)
-        .background(Theme.cardBackground)
-    }
 
     private func shareView(screenWidth: CGFloat) -> some View {
         VStack(spacing: 16) {
@@ -1394,54 +1426,6 @@ struct SearchView: View {
             Rectangle()
                 .fill(Theme.border)
                 .frame(height: 1)
-        }
-    }
-
-    private func productsSection(_ title: String, _ products: [FindProductLink]) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(title.uppercased())
-                .font(.system(size: 12, weight: .black))
-                .foregroundStyle(Theme.subtext)
-
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                ForEach(products) { product in
-                    Link(destination: product.ctaURL) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            AsyncImage(url: product.iconURL) { phase in
-                                if let image = phase.image {
-                                    image
-                                        .resizable()
-                                        .scaledToFit()
-                                } else {
-                                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                        .fill(Theme.surface)
-                                }
-                            }
-                            .frame(width: product.wideIcon ? 72 : 36, height: 36)
-
-                            Text(product.name)
-                                .font(.system(size: 15, weight: .bold))
-                                .foregroundStyle(Theme.text)
-                                .multilineTextAlignment(.leading)
-
-                            Text(product.body)
-                                .font(.system(size: 13))
-                                .foregroundStyle(Theme.subtext)
-                                .multilineTextAlignment(.leading)
-                                .lineLimit(2)
-                        }
-                        .padding(14)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Theme.cardBackground)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(Theme.border, lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
         }
     }
 
