@@ -1,8 +1,8 @@
 import SwiftUI
-import NaturalLanguage
 
 struct SearchView: View {
     @StateObject private var viewModel: SearchViewModel
+    @ObservedObject private var awardsService: FindAwardsService
     @StateObject private var tiltNav = TiltNavigationService()
     @State private var selectedTab: BottomTab = .home
     @State private var showingShareSheet = false
@@ -28,6 +28,7 @@ struct SearchView: View {
         case grid = "GRID"
         case history = "HISTORY"
         case info = "INFO"
+        case awards = "AWARDS"
         case share = "SHARE"
 
         var systemImage: String {
@@ -36,6 +37,7 @@ struct SearchView: View {
             case .grid: return "square.grid.2x2"
             case .history: return "arrow.counterclockwise"
             case .info: return "info.circle.fill"
+            case .awards: return "rosette"
             case .share: return "square.and.arrow.up"
             }
         }
@@ -68,8 +70,9 @@ struct SearchView: View {
         FindQuickAction(label: "Events", systemImage: "calendar", color: Theme.quickActionEvents, query: "events near me", disabled: true),
     ]
 
-    init(viewModel: SearchViewModel) {
+    init(viewModel: SearchViewModel, awardsService: FindAwardsService) {
         _viewModel = StateObject(wrappedValue: viewModel)
+        self.awardsService = awardsService
     }
 
     var body: some View {
@@ -85,6 +88,8 @@ struct SearchView: View {
                         historyView(screenWidth: geometry.size.width)
                     case .info:
                         infoView(screenWidth: geometry.size.width)
+                    case .awards:
+                        awardsView(screenWidth: geometry.size.width)
                     case .share:
                         shareView(screenWidth: geometry.size.width)
                     }
@@ -93,6 +98,19 @@ struct SearchView: View {
                     footerStack(screenWidth: geometry.size.width, bottomInset: geometry.safeAreaInsets.bottom)
                 } else {
                     bottomBar(screenWidth: geometry.size.width, bottomInset: geometry.safeAreaInsets.bottom)
+                }
+
+                if let unlocked = viewModel.pendingAwardUnlock {
+                    AwardUnlockView(
+                        award: unlocked,
+                        unlockedCount: awardsService.unlockedCount,
+                        totalCount: awardsService.totalCount
+                    ) {
+                        viewModel.dismissAwardUnlock()
+                    }
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .transition(.opacity)
+                    .zIndex(100)
                 }
             }
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
@@ -620,84 +638,18 @@ struct SearchView: View {
         VStack(spacing: 0) {
             resultShelf(screenWidth: screenWidth)
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    if let heroURL = heroImageURL {
-                        heroImageView(url: heroURL, screenWidth: screenWidth)
+            Group {
+                if let response = viewModel.searchResponse {
+                    if results.isEmpty {
+                        // A pure Q&A answer with no ranked source still has
+                        // exactly one page to show - nothing to curl between,
+                        // and the shelf chevrons are already disabled for
+                        // this case (see resultShelf).
+                        ResultPageView(response: response, pageIndex: hasLeadingAnswer ? -1 : 0, screenWidth: screenWidth)
+                    } else {
+                        FindResultPageCurlView(response: response, currentIndex: pagingIndexBinding, screenWidth: screenWidth, hasLeadingAnswer: hasLeadingAnswer)
                     }
-
-                    VStack(alignment: .leading, spacing: 18) {
-                        Text(currentEyebrow)
-                            .font(.system(size: 14, weight: .black))
-                            .foregroundStyle(Theme.accent)
-
-                        Text(currentBusinessName)
-                            .font(.system(size: 21, weight: .bold))
-                            .foregroundStyle(Theme.text)
-
-                        if !currentBusinessAddress.isEmpty {
-                            Text(currentBusinessAddress)
-                                .font(.system(size: 14))
-                                .foregroundStyle(Theme.subtext)
-                        }
-
-                        if !currentBusinessMeta.isEmpty, let urlString = currentResult?.url, let url = URL(string: urlString) {
-                            HStack(spacing: 12) {
-                                ForEach(currentBusinessMeta, id: \.self) { item in
-                                    Link(item, destination: url)
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundStyle(Theme.accent)
-                                }
-                            }
-                        }
-
-                        if let sourceURL = currentSourceDisplayURL {
-                            Text(sourceURL)
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(Theme.subtext)
-                        }
-
-                        if let hours = currentBusinessHours {
-                            hoursCard(hours)
-                        }
-
-                        if !currentHoursFromSummary {
-                            VStack(alignment: .leading, spacing: 16) {
-                                ForEach(answerParagraphs, id: \.self) { paragraph in
-                                    Text(paragraph)
-                                        .font(.system(size: 16))
-                                        .foregroundStyle(Theme.subtext)
-                                        .lineSpacing(6)
-                                }
-                            }
-                        }
-                    }
-                    .padding(22)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Theme.cardBackground)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .stroke(Theme.border, lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                    .padding(.horizontal, 18)
-                    .offset(y: heroImageURL == nil ? 18 : -8)
-
-                    referencesSection
-                        .padding(.top, heroImageURL == nil ? 18 : -8)
-
-                    if let resultMetaText {
-                        Text(resultMetaText)
-                            .font(.system(size: 12))
-                            .foregroundStyle(Theme.subtext)
-                            .padding(.horizontal, 18)
-                            .padding(.top, 14)
-                    }
-
-                    Spacer(minLength: 18)
                 }
-                .frame(width: screenWidth)
-                .padding(.bottom, 150)
             }
             .overlay {
                 if viewModel.isLoading {
@@ -718,19 +670,29 @@ struct SearchView: View {
                     }
                 }
             }
-            .gesture(
-                DragGesture(minimumDistance: 30)
-                    .onEnded { value in
-                        if abs(value.translation.width) > abs(value.translation.height) {
-                            if value.translation.width < 0 {
-                                goToNextResult()
-                            } else {
-                                goToPreviousResult()
-                            }
-                        }
-                    }
-            )
         }
+    }
+
+    // The source of truth for "which page is showing" is `viewModel.
+    // selectedResult` (a value, not an index - see `selectedResultIndex`),
+    // so this bridges it to the plain `Binding<Int>` UIPageViewController
+    // wants: reads resolve the selected result's index, writes re-select
+    // the result at that index. A swipe lands here via the page-curl
+    // coordinator's `didFinishAnimating`; a shelf-chevron tap already calls
+    // `viewModel.select(...)` directly, and `FindResultPageCurlView` notices
+    // the mismatch next render and animates the same curl to it.
+    private var pagingIndexBinding: Binding<Int> {
+        Binding(
+            get: { viewModel.viewingGroundedAnswer ? -1 : selectedResultIndex },
+            set: { newIndex in
+                if newIndex == -1 {
+                    viewModel.viewingGroundedAnswer = true
+                    return
+                }
+                guard results.indices.contains(newIndex) else { return }
+                viewModel.select(results[newIndex])
+            }
+        )
     }
 
     private func resultShelf(screenWidth: CGFloat) -> some View {
@@ -758,9 +720,10 @@ struct SearchView: View {
 
                 HStack(spacing: 5) {
                     ForEach(0..<results.count, id: \.self) { index in
+                        let isActive = index == selectedResultIndex && !viewModel.viewingGroundedAnswer
                         Circle()
-                            .fill(index == selectedResultIndex ? Theme.text : Theme.border)
-                            .frame(width: index == selectedResultIndex ? 8 : 6, height: index == selectedResultIndex ? 8 : 6)
+                            .fill(isActive ? Theme.text : Theme.border)
+                            .frame(width: isActive ? 8 : 6, height: isActive ? 8 : 6)
                     }
                 }
             }
@@ -771,12 +734,12 @@ struct SearchView: View {
             } label: {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(results.isEmpty || selectedResultIndex >= results.count - 1 ? Theme.subtext : Theme.text)
+                    .foregroundStyle(canGoToNextResult ? Theme.text : Theme.subtext)
                     .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
             .contentShape(Rectangle())
-            .disabled(results.isEmpty || selectedResultIndex >= results.count - 1)
+            .disabled(!canGoToNextResult)
         }
         .frame(width: screenWidth)
         .padding(.horizontal, 12)
@@ -1119,6 +1082,42 @@ struct SearchView: View {
                 if tiltNav.isSupported {
                     tiltSection
                 }
+            }
+            .frame(width: screenWidth - 36, alignment: .topLeading)
+            .padding(.horizontal, 18)
+            .padding(.top, 24)
+            .padding(.bottom, 120)
+            .background(Theme.cardBackground)
+        }
+        .background(Theme.cardBackground)
+    }
+
+    private func awardsView(screenWidth: CGFloat) -> some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack {
+                    Button {
+                        viewModel.resetSearch()
+                        showingSearchScreen = true
+                        selectedTab = .home
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(Theme.text)
+                            .frame(width: 36, height: 36)
+                            .background(Theme.cardBackground)
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(Theme.border, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Back to home")
+
+                    Text("Awards")
+                        .font(.system(size: 22, weight: .bold))
+                    Spacer()
+                }
+
+                AwardsGridView(awardsService: awardsService)
             }
             .frame(width: screenWidth - 36, alignment: .topLeading)
             .padding(.horizontal, 18)
@@ -1746,312 +1745,21 @@ struct SearchView: View {
         .background(Theme.surface)
     }
 
-    // True only on the single slide the backend originally recommended
-    // (searchResponse.selectedIndex, fixed per search - not the same as
-    // selectedResultIndex, which changes as you page). Mirrors the web
-    // app's isGroundedAnswerSlide: the shared AI-synthesized answer only
-    // belongs on that one slide; every other slide - reached by paging via
-    // the shelf chevrons - shows that individual result's own title/
-    // summary/source, same as the grid shows for it.
     private var isGroundedAnswerSlide: Bool {
+        viewModel.viewingGroundedAnswer
+    }
+
+    // Whether a dedicated leading slide (page -1) exists for the backend's
+    // own generated answer - see FindResultPageCurlView/ResultPageView.
+    private var hasLeadingAnswer: Bool {
         guard viewModel.searchResponse?.queryType == .question else { return false }
-        guard let text = viewModel.searchResponse?.answer?.text,
-              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
-        let originalIndex = viewModel.searchResponse?.selectedIndex ?? 0
-        return selectedResultIndex == originalIndex
+        let text = viewModel.searchResponse?.answer?.text ?? ""
+        return !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private var currentEyebrow: String {
-        isGroundedAnswerSlide ? "ANSWER" : "RESULT \(selectedResultIndex + 1)"
-    }
-
-    private var currentSourceDisplayURL: String? {
-        guard !isGroundedAnswerSlide else { return nil }
-        let displayUrl = currentResult?.displayUrl ?? ""
-        return displayUrl.isEmpty ? nil : displayUrl
-    }
-
-    // Matches the web app's find-question-sources block: the citations
-    // behind the grounded answer, shown only on that slide. Each opens the
-    // actual source, same as everywhere else Find links out.
-    @ViewBuilder
-    private var referencesSection: some View {
-        if isGroundedAnswerSlide, let references = viewModel.searchResponse?.answer?.references, !references.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("References")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(Theme.text)
-                    Spacer()
-                    Text("\(references.count) SOURCES")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Theme.subtext)
-                }
-
-                VStack(spacing: 10) {
-                    ForEach(references) { reference in
-                        Button {
-                            if let url = URL(string: reference.url) {
-                                openURL(url)
-                            }
-                        } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(reference.displayUrl)
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(Theme.accent)
-                                Text(reference.title)
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundStyle(Theme.text)
-                                    .multilineTextAlignment(.leading)
-                            }
-                            .padding(14)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Theme.cardBackground)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(Theme.border, lineWidth: 1)
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-            .padding(.horizontal, 18)
-        }
-    }
-
-    // Matches the web app's find-result-meta line.
-    private var resultMetaText: String? {
-        guard let timings = viewModel.searchResponse?.timings else { return nil }
-
-        var parts = [String(format: "%.1fs total", Double(timings.totalMs) / 1000)]
-        if timings.candidateCount > 0 {
-            parts.append("\(timings.candidateCount) candidates")
-        }
-        if timings.enrichedCount > 0 {
-            parts.append("\(timings.enrichedCount) pages checked")
-        }
-
-        if currentResult?.isFirstParty == true {
-            parts.append("official Taliferro knowledge")
-        } else if let answer = currentResult?.answer, !answer.isEmpty,
-                  currentResult?.isFirstParty != true,
-                  viewModel.searchResponse?.queryType != .question {
-            parts.append("TODD summary")
-        } else if viewModel.searchResponse?.queryType == .question {
-            parts.append(isGroundedAnswerSlide ? "grounded answer" : "supporting result")
-        }
-
-        return parts.joined(separator: " · ")
-    }
-
-    private var answerParagraphs: [String] {
-        let candidates: [String?] = isGroundedAnswerSlide ?
-            [viewModel.searchResponse?.answer?.text] :
-            [currentResult?.answer, currentResult?.summary]
-        let text = (candidates.compactMap { $0 }.first(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } ) ?? "")
-            .replacingOccurrences(of: "\r\n", with: "\n")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        if text.isEmpty { return [] }
-
-        let explicit = text.split(separator: "\n").map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
-        if explicit.count > 1 { return explicit }
-
-        let sentences = sentenceTokenize(text)
-        if sentences.count < 4 { return [text] }
-
-        var paragraphs: [String] = []
-        var chunk: [String] = []
-        for sentence in sentences {
-            chunk.append(sentence)
-            if chunk.count == 2 {
-                paragraphs.append(chunk.joined(separator: " "))
-                chunk.removeAll()
-            }
-        }
-        if !chunk.isEmpty {
-            paragraphs.append(chunk.joined(separator: " "))
-        }
-        return paragraphs
-    }
-
-    private var currentBusinessHours: FindBusinessHours? {
-        if let hours = currentResult?.hours, !hours.days.isEmpty {
-            return hours
-        }
-
-        // The backend may place provider text in either `answer` or
-        // `summary`, depending on which result/enrichment path produced the
-        // card. Try both, plus the top-level answer, so iOS matches the web
-        // app's structured-hours fallback behavior.
-        let candidates = [
-            currentResult?.answer,
-            currentResult?.summary,
-            viewModel.searchResponse?.answer?.text
-        ]
-        for candidate in candidates {
-            if let parsed = parsedHours(from: candidate ?? ""), !parsed.days.isEmpty {
-                return parsed
-            }
-        }
-        return nil
-    }
-
-    private var currentHoursFromSummary: Bool {
-        currentResult?.hours == nil && currentBusinessHours != nil
-    }
-
-    private func hoursCard(_ hours: FindBusinessHours) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("Hours")
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(Theme.text)
-                Spacer()
-                if let statusText = hours.statusText, !statusText.isEmpty {
-                    Text(statusText)
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(hours.isOpenNow == true ? .green : .red)
-                } else if let isOpenNow = hours.isOpenNow {
-                    Text(isOpenNow ? "Open now" : "Closed now")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(isOpenNow ? .green : .red)
-                } else if let status = currentHoursStatus(hours) {
-                    Text(status.text)
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(status.isOpen ? .green : .red)
-                }
-            }
-            .padding(.bottom, 8)
-
-            ForEach(Array(hours.days.enumerated()), id: \.offset) { index, day in
-                HStack(alignment: .top, spacing: 10) {
-                    Text(day.day)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle( isToday(day.day) ? Theme.accent : Theme.text )
-                        .frame(width: 92, alignment: .leading)
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        if day.isClosed == true {
-                            Text("Closed")
-                        } else if day.isTwentyFourHours == true {
-                            Text("Open 24 hours")
-                        } else if day.periods.isEmpty {
-                            Text("Hours unavailable")
-                        } else {
-                            ForEach(Array(day.periods.enumerated()), id: \.offset) { _, period in
-                                Text("\(period.open) – \(period.close)")
-                            }
-                        }
-                    }
-                    .font(.system(size: 14))
-                    .foregroundStyle(Theme.subtext)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .padding(.vertical, 9)
-                .background(isToday(day.day) ? Theme.accent.opacity(0.08) : .clear)
-                .overlay(alignment: .top) {
-                    if index > 0 { Rectangle().fill(Theme.border).frame(height: 1) }
-                }
-            }
-
-            ForEach(hours.holidayNotes ?? [], id: \.self) { note in
-                Text(note)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.subtext)
-                    .padding(.top, 8)
-            }
-        }
-        .padding(16)
-        .background(Theme.surface)
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.border, lineWidth: 1))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .padding(.vertical, 4)
-    }
-
-    private func isToday(_ day: String) -> Bool {
-        let today = Calendar.current.weekdaySymbols[Calendar.current.component(.weekday, from: Date()) - 1]
-        return day.lowercased() == today.lowercased() || day.lowercased() == String(today.prefix(3)).lowercased()
-    }
-
-    private func currentHoursStatus(_ hours: FindBusinessHours) -> (text: String, isOpen: Bool)? {
-        let today = Calendar.current.weekdaySymbols[Calendar.current.component(.weekday, from: Date()) - 1]
-        guard let day = hours.days.first(where: { $0.day.lowercased() == today.lowercased() || $0.day.lowercased() == String(today.prefix(3)).lowercased() }) else { return nil }
-        if day.isClosed == true { return ("Closed now", false) }
-        if day.isTwentyFourHours == true { return ("Open now", true) }
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "h:mm a"
-        let nowComponents = Calendar.current.dateComponents([.hour, .minute], from: Date())
-        let now = (nowComponents.hour ?? 0) * 60 + (nowComponents.minute ?? 0)
-        let open = day.periods.contains { period in
-            guard let start = formatter.date(from: period.open), let end = formatter.date(from: period.close) else { return false }
-            let startComponents = Calendar.current.dateComponents([.hour, .minute], from: start)
-            let endComponents = Calendar.current.dateComponents([.hour, .minute], from: end)
-            let startMinutes = (startComponents.hour ?? 0) * 60 + (startComponents.minute ?? 0)
-            let endMinutes = (endComponents.hour ?? 0) * 60 + (endComponents.minute ?? 0)
-            return endMinutes < startMinutes ? now >= startMinutes || now <= endMinutes : now >= startMinutes && now <= endMinutes
-        }
-        return (open ? "Open now" : "Closed now", open)
-    }
-
-    private func parsedHours(from text: String) -> FindBusinessHours? {
-        let source = text.replacingOccurrences(of: "–", with: "-").replacingOccurrences(of: "—", with: "-")
-        guard let dayRegex = try? NSRegularExpression(pattern: "(?i)\\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Mon|Tue|Wed|Thu|Fri|Sat|Sun)\\b\\s*[-:]", options: []) else { return nil }
-        let nsSource = source as NSString
-        let matches = dayRegex.matches(in: source, range: NSRange(location: 0, length: nsSource.length))
-        guard !matches.isEmpty else { return nil }
-
-        let timeRegex = try? NSRegularExpression(pattern: "(?i)(\\d{1,2}(?::\\d{2})?\\s*[AP]M)\\s*-\\s*(\\d{1,2}(?::\\d{2})?\\s*[AP]M)", options: [])
-        let days: [FindBusinessHoursDay] = matches.enumerated().compactMap { index, match in
-            let dayValue = nsSource.substring(with: match.range(at: 1))
-            let start = match.range.location + match.range.length
-            let end = index + 1 < matches.count ? matches[index + 1].range.location : nsSource.length
-            let segment = nsSource.substring(with: NSRange(location: start, length: max(0, end - start)))
-            if segment.range(of: "closed", options: .caseInsensitive) != nil {
-                return FindBusinessHoursDay(day: normalizedDay(dayValue), periods: [], isClosed: true, isTwentyFourHours: false)
-            }
-            if segment.range(of: "24 hours", options: .caseInsensitive) != nil || segment.range(of: "open 24", options: .caseInsensitive) != nil {
-                return FindBusinessHoursDay(day: normalizedDay(dayValue), periods: [], isClosed: false, isTwentyFourHours: true)
-            }
-            let periods = timeRegex?.matches(in: segment, range: NSRange(location: 0, length: (segment as NSString).length)).compactMap { periodMatch -> FindBusinessHoursPeriod? in
-                guard periodMatch.numberOfRanges >= 3 else { return nil }
-                return FindBusinessHoursPeriod(open: (segment as NSString).substring(with: periodMatch.range(at: 1)).replacingOccurrences(of: "  ", with: " "), close: (segment as NSString).substring(with: periodMatch.range(at: 2)).replacingOccurrences(of: "  ", with: " "))
-            } ?? []
-            return periods.isEmpty ? nil : FindBusinessHoursDay(day: normalizedDay(dayValue), periods: periods, isClosed: false, isTwentyFourHours: false)
-        }
-        guard !days.isEmpty else { return nil }
-        return FindBusinessHours(timezone: nil, isOpenNow: nil, statusText: nil, days: days, holidayNotes: nil, sourceUrl: nil)
-    }
-
-    private func normalizedDay(_ value: String) -> String {
-        switch value.lowercased().prefix(3) {
-        case "mon": return "Monday"
-        case "tue": return "Tuesday"
-        case "wed": return "Wednesday"
-        case "thu": return "Thursday"
-        case "fri": return "Friday"
-        case "sat": return "Saturday"
-        case "sun": return "Sunday"
-        default: return value
-        }
-    }
-
-    // NLTokenizer understands sentence-ending punctuation vs. abbreviation
-    // periods (e.g. "U.S.", "Dr.") correctly, unlike a naive split on ".".
-    private func sentenceTokenize(_ text: String) -> [String] {
-        let tokenizer = NLTokenizer(unit: .sentence)
-        tokenizer.string = text
-        var sentences: [String] = []
-        tokenizer.enumerateTokens(in: text.startIndex..<text.endIndex) { range, _ in
-            let sentence = text[range].trimmingCharacters(in: .whitespacesAndNewlines)
-            if !sentence.isEmpty {
-                sentences.append(sentence)
-            }
-            return true
-        }
-        return sentences
+    private var canGoToNextResult: Bool {
+        guard !results.isEmpty else { return false }
+        return viewModel.viewingGroundedAnswer || selectedResultIndex < results.count - 1
     }
 
     private var currentPills: [String] {
@@ -2078,44 +1786,6 @@ struct SearchView: View {
         (viewModel.searchResponse?.query ?? viewModel.query).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private var currentTitle: String {
-        if isGroundedAnswerSlide {
-            return (viewModel.searchResponse?.query ?? "Find").trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        return (currentResult?.title ?? viewModel.searchResponse?.query ?? "Find").trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private var currentBusinessName: String {
-        businessTitleParts.name.isEmpty ? currentTitle : businessTitleParts.name
-    }
-
-    private var currentBusinessAddress: String {
-        businessTitleParts.address
-    }
-
-    private var currentBusinessMeta: [String] {
-        businessTitleParts.meta
-    }
-
-    private var businessTitleParts: (name: String, address: String, meta: [String]) {
-        let title = (currentResult?.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let segments = title.components(separatedBy: " - ").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
-        guard segments.count > 1,
-              let addressIndex = segments.firstIndex(where: { segment in
-                  guard let first = segment.first else { return false }
-                  return first.isNumber && segment.contains(",")
-              }), addressIndex > 0 else {
-            return (title, "", [])
-        }
-
-        let metadata = segments[segments.index(after: segments.startIndex)..<addressIndex]
-            .flatMap { $0.components(separatedBy: " & ") }
-            .filter { item in
-                item.range(of: "updated|photos?|reviews?", options: [.caseInsensitive, .regularExpression]) != nil
-            }
-        return (segments[0], segments[addressIndex], metadata)
-    }
-
     private var currentShareURL: URL? {
         if let urlString = currentResult?.url {
             return URL(string: urlString)
@@ -2136,13 +1806,12 @@ struct SearchView: View {
     }
 
     private func goToNextResult() {
+        if viewModel.viewingGroundedAnswer {
+            viewModel.viewingGroundedAnswer = false
+            return
+        }
         guard selectedResultIndex < results.count - 1 else { return }
         viewModel.select(results[selectedResultIndex + 1])
-    }
-
-    private func goToPreviousResult() {
-        guard selectedResultIndex > 0 else { return }
-        viewModel.select(results[selectedResultIndex - 1])
     }
 
     private var errorPresented: Binding<Bool> {
@@ -2158,6 +1827,7 @@ struct SearchView: View {
 }
 
 #Preview {
+    let awardsService = FindAwardsService()
     NavigationStack {
         SearchView(
             viewModel: SearchViewModel(
@@ -2166,8 +1836,10 @@ struct SearchView: View {
                         apiBaseURL: URL(string: "https://api.taliferro.tech/api")!,
                         apiKey: "preview"
                     )
-                )
-            )
+                ),
+                awardsService: awardsService
+            ),
+            awardsService: awardsService
         )
     }
 }

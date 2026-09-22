@@ -181,6 +181,26 @@ struct FindRankedResult: Codable, Identifiable, Hashable {
     let pills: [String]
     let isFirstParty: Bool
     let hours: FindBusinessHours?
+
+    // isFirstParty is absent on RSS-backed results (e.g. queryType "news") -
+    // the web app's FindRankedResult interface already marks it `?:
+    // boolean` for exactly this reason. A synthesized Decodable would throw
+    // keyNotFound and fail the entire search for those query types.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        rank = try container.decode(Int.self, forKey: .rank)
+        title = try container.decode(String.self, forKey: .title)
+        summary = try container.decode(String.self, forKey: .summary)
+        answer = try container.decodeIfPresent(String.self, forKey: .answer)
+        url = try container.decode(String.self, forKey: .url)
+        displayUrl = try container.decode(String.self, forKey: .displayUrl)
+        imageUrl = try container.decode(String.self, forKey: .imageUrl)
+        sourceType = try container.decode(FindSourceType.self, forKey: .sourceType)
+        confidence = try container.decode(Double.self, forKey: .confidence)
+        pills = try container.decode([String].self, forKey: .pills)
+        isFirstParty = try container.decodeIfPresent(Bool.self, forKey: .isFirstParty) ?? false
+        hours = try container.decodeIfPresent(FindBusinessHours.self, forKey: .hours)
+    }
 }
 
 struct FindSearchHandoff: Codable, Hashable {

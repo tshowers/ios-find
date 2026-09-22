@@ -11,13 +11,24 @@ final class SearchViewModel: ObservableObject {
     @Published var summaryText = ""
     @Published var isSummarizing = false
     @Published var searchHistory: [String] = []
+    @Published var pendingAwardUnlock: FindAward?
+    // True while the swipe carousel is showing the backend's own generated
+    // answer.text as a slide *before* the ranked results, rather than
+    // treating it as a replacement for the top-ranked source card.
+    @Published var viewingGroundedAnswer = false
 
     private let apiClient: FindAPIClient
+    private let awardsService: FindAwardsService
     private let historyKey = "find-history"
 
-    init(apiClient: FindAPIClient) {
+    init(apiClient: FindAPIClient, awardsService: FindAwardsService) {
         self.apiClient = apiClient
+        self.awardsService = awardsService
         loadHistory()
+    }
+
+    func dismissAwardUnlock() {
+        pendingAwardUnlock = nil
     }
 
     func runSearch() async {
@@ -35,7 +46,14 @@ final class SearchViewModel: ObservableObject {
             selectedResult = resolvedResponse.results.indices.contains(resolvedResponse.selectedIndex)
                 ? resolvedResponse.results[resolvedResponse.selectedIndex]
                 : resolvedResponse.results.first
+            let answerText = resolvedResponse.answer?.text.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            viewingGroundedAnswer = resolvedResponse.queryType == .question
+                && !answerText.isEmpty
+                && !resolvedResponse.results.isEmpty
             addToHistory(trimmed)
+            if let unlocked = awardsService.recordSearch() {
+                pendingAwardUnlock = unlocked
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -45,6 +63,7 @@ final class SearchViewModel: ObservableObject {
 
     func select(_ result: FindRankedResult) {
         selectedResult = result
+        viewingGroundedAnswer = false
         summaryText = ""
     }
 
@@ -99,6 +118,7 @@ final class SearchViewModel: ObservableObject {
         errorMessage = ""
         searchResponse = nil
         selectedResult = nil
+        viewingGroundedAnswer = false
         summaryText = ""
         isSummarizing = false
     }

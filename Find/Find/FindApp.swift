@@ -11,11 +11,15 @@ import SwiftUI
 struct FindApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     private let apiClient = FindAPIClient(config: .fromBundle())
+    private let awardsService = FindAwardsService()
 
     var body: some Scene {
         WindowGroup {
             NavigationStack {
-                SearchView(viewModel: SearchViewModel(apiClient: apiClient))
+                SearchView(
+                    viewModel: SearchViewModel(apiClient: apiClient, awardsService: awardsService),
+                    awardsService: awardsService
+                )
             }
             // Every screen is a fixed-pixel custom layout (circular tab
             // icons, precise card grids) rather than adaptive/reflowing text
