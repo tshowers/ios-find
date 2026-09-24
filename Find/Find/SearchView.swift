@@ -1837,7 +1837,8 @@ struct SearchView: View {
                         apiKey: "preview"
                     )
                 ),
-                awardsService: awardsService
+                awardsService: awardsService,
+                locationService: FindLocationService()
             ),
             awardsService: awardsService
         )

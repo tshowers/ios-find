@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import CoreLocation
 
 @MainActor
 final class SearchViewModel: ObservableObject {
@@ -19,11 +20,36 @@ final class SearchViewModel: ObservableObject {
 
     private let apiClient: FindAPIClient
     private let awardsService: FindAwardsService
+    private let locationService: FindLocationService
     private let historyKey = "find-history"
 
-    init(apiClient: FindAPIClient, awardsService: FindAwardsService) {
+    // Mirrors the web app's NEAR_ME_PATTERN (find-home.component.ts): any of
+    // these phrasings trigger a location request for a "near me"-shaped
+    // local-business query.
+    private static let nearMePattern = try! NSRegularExpression(
+        pattern: #"\b(?:near me|nearby|near here|close(?:st)? to me|close by|around here|by me|in my area|in my neighborhood|in my zip\s*code|in my zipcode|in my zip)\b"#,
+        options: [.caseInsensitive]
+    )
+
+    // Mirrors LOCATIONLESS_WEATHER_PATTERN: a bare "weather"/"forecast"/
+    // "temperature" query with no named place (like the Weather quick
+    // action's "weather") needs the device's own location, unlike "weather
+    // in Chicago" which the backend geocodes from the text itself.
+    private static let locationlessWeatherPattern = try! NSRegularExpression(
+        pattern: #"^(?:(?:what'?s|what is|how'?s|how is|the)\s+)?(?:weather|forecast|temperature)(?:\s+(?:like|today|tomorrow|tonight|right now|currently|this week|this weekend|now))?[?.!]*$"#,
+        options: [.caseInsensitive]
+    )
+
+    private static func isLocationShapedQuery(_ query: String) -> Bool {
+        let range = NSRange(query.startIndex..., in: query)
+        return nearMePattern.firstMatch(in: query, range: range) != nil
+            || locationlessWeatherPattern.firstMatch(in: query, range: range) != nil
+    }
+
+    init(apiClient: FindAPIClient, awardsService: FindAwardsService, locationService: FindLocationService) {
         self.apiClient = apiClient
         self.awardsService = awardsService
+        self.locationService = locationService
         loadHistory()
     }
 
@@ -39,8 +65,19 @@ final class SearchViewModel: ObservableObject {
         errorMessage = ""
         summaryText = ""
 
+        // Only requested for a location-shaped query (never on launch) -
+        // resolves to nil on denial/timeout rather than throwing, so the
+        // search still runs without coordinates instead of blocking.
+        let coordinate = Self.isLocationShapedQuery(trimmed)
+            ? await locationService.currentCoordinate()
+            : nil
+
         do {
-            let response = try await apiClient.search(query: trimmed)
+            let response = try await apiClient.search(
+                query: trimmed,
+                latitude: coordinate?.latitude,
+                longitude: coordinate?.longitude
+            )
             let resolvedResponse = response.applyingLocalConversionFallback(to: trimmed)
             searchResponse = resolvedResponse
             selectedResult = resolvedResponse.results.indices.contains(resolvedResponse.selectedIndex)

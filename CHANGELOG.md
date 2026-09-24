@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented here.
 
+## 2026-09-24
+
+### Released
+- v1.0 (build 1) shipped to the App Store — the app's first public release.
+
+### Added
+- `FindLocationService.swift` — the app never had any `CoreLocation`
+  integration before this, so the Weather quick action and "restaurants near
+  me" sent no coordinates and silently fell back to a generic result. Location
+  is now requested lazily (only for a location-shaped query, never on launch)
+  and cached for the session, mirroring the web app's
+  `resolveCoordinatesForQuery`. Added the required
+  `NSLocationWhenInUseUsageDescription` to both build configs.
+
+### Fixed
+- Build number bumped to 2 for the next archive — App Store Connect requires
+  a unique, increasing build number per upload within the same marketing
+  version.
+
 ## 2026-08-30
 
 ### Added
