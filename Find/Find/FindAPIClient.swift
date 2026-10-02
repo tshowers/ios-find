@@ -62,6 +62,10 @@ final class FindAPIClient {
         return response.answer
     }
 
+    func submitFeedback(_ payload: FindFeedbackRequest) async throws {
+        _ = try await post(path: "find/feedback", payload: payload, responseType: FindFeedbackResponse.self)
+    }
+
     private func post<Request: Encodable, Response: Decodable>(
         path: String,
         payload: Request,

@@ -17,7 +17,7 @@ struct AwardsGridView: View {
                     VStack(spacing: 10) {
                         AwardBadgeView(icon: award.icon, state: award.state)
                         Text(award.state == .mystery ? "\u{2014} \u{2014} \u{2014}" : award.title)
-                            .font(.system(size: 12, weight: .bold))
+                            .font(Theme.font(12, weight: .bold))
                             .foregroundStyle(titleColor(for: award.state))
                             .tracking(award.state == .mystery ? 1 : 0)
                             .multilineTextAlignment(.center)
@@ -40,7 +40,7 @@ struct AwardsGridView: View {
             .frame(height: 6)
 
             Text("\(awardsService.unlockedCount) of \(awardsService.totalCount) unlocked")
-                .font(.system(size: 12, weight: .bold))
+                .font(Theme.font(12, weight: .bold))
                 .foregroundStyle(Theme.subtext)
                 .fixedSize()
         }

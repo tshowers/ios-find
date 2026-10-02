@@ -38,7 +38,7 @@ struct AwardUnlockView: View {
                 Spacer(minLength: 90)
 
                 Text("AWARD UNLOCKED")
-                    .font(.system(size: 12, weight: .heavy))
+                    .font(Theme.font(12, weight: .heavy))
                     .tracking(2)
                     .foregroundStyle(Theme.subtext)
                     .opacity(eyebrowVisible ? 1 : 0)
@@ -57,7 +57,7 @@ struct AwardUnlockView: View {
                 .padding(.top, 28)
 
                 Text(award.title)
-                    .font(.system(size: 24, weight: .heavy))
+                    .font(Theme.font(24, weight: .heavy))
                     .foregroundStyle(Theme.text)
                     .multilineTextAlignment(.center)
                     .padding(.top, 24)
@@ -65,7 +65,7 @@ struct AwardUnlockView: View {
                     .offset(y: titleVisible ? 0 : 8)
 
                 Text("\u{201C}\(award.copy)\u{201D}")
-                    .font(.system(size: 15))
+                    .font(Theme.font(15))
                     .foregroundStyle(Theme.subtext)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
@@ -75,7 +75,7 @@ struct AwardUnlockView: View {
                     .offset(y: descVisible ? 0 : 8)
 
                 Text("\(unlockedCount) of \(totalCount) unlocked")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(Theme.font(12, weight: .bold))
                     .foregroundStyle(Theme.subtext)
                     .padding(.top, 20)
                     .opacity(hintVisible ? 1 : 0)
@@ -85,8 +85,8 @@ struct AwardUnlockView: View {
 
                 Button(action: onContinue) {
                     Text("Continue")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.black)
+                        .font(Theme.font(16, weight: .bold))
+                        .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
                         .background(Theme.accent)

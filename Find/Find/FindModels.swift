@@ -11,6 +11,9 @@ enum FindQueryType: Codable, Hashable {
     case weather
     case conversion
     case local
+    case movie
+    case sports
+    case news
     case unknown(String)
 
     init(from decoder: Decoder) throws {
@@ -22,6 +25,9 @@ enum FindQueryType: Codable, Hashable {
         case "weather": self = .weather
         case "conversion": self = .conversion
         case "local": self = .local
+        case "movie": self = .movie
+        case "sports": self = .sports
+        case "news": self = .news
         default: self = .unknown(raw)
         }
     }
@@ -35,6 +41,9 @@ enum FindQueryType: Codable, Hashable {
         case .weather: try container.encode("weather")
         case .conversion: try container.encode("conversion")
         case .local: try container.encode("local")
+        case .movie: try container.encode("movie")
+        case .sports: try container.encode("sports")
+        case .news: try container.encode("news")
         case .unknown(let raw): try container.encode(raw)
         }
     }
@@ -52,6 +61,8 @@ struct FindWeatherForecastDay: Codable, Hashable {
 
 struct FindWeatherInfo: Codable, Hashable {
     let location: String
+    let latitude: Double?
+    let longitude: Double?
     let postalCode: String?
     let timezone: String?
     let tempF: Double
@@ -87,6 +98,24 @@ struct FindConversionResult: Codable, Hashable {
     let rate: Double?
     let rateUpdatedAt: String?
     let source: String?
+}
+
+// OMDb details the backend attaches to a `movie` answer (results is empty).
+struct FindMovieRatings: Codable, Hashable {
+    let title: String
+    let year: String?
+    let rated: String?
+    let runtime: String?
+    let genre: String?
+    let director: String?
+    let actors: String?
+    let plot: String?
+    let posterUrl: String?
+    let imdbRating: String?
+    let imdbVotes: String?
+    let imdbId: String?
+    let metascore: String?
+    let rottenTomatoesScore: String?
 }
 
 struct FindBusinessHoursPeriod: Codable, Hashable {
@@ -181,6 +210,12 @@ struct FindRankedResult: Codable, Identifiable, Hashable {
     let pills: [String]
     let isFirstParty: Bool
     let hours: FindBusinessHours?
+    // Set on local-business (Places) results.
+    let address: String?
+    let phone: String?
+    // Set on News/Sports headlines served from the hourly RSS snapshot.
+    let rssSource: String?
+    let publishedAt: String?
 
     // isFirstParty is absent on RSS-backed results (e.g. queryType "news") -
     // the web app's FindRankedResult interface already marks it `?:
@@ -200,6 +235,10 @@ struct FindRankedResult: Codable, Identifiable, Hashable {
         pills = try container.decode([String].self, forKey: .pills)
         isFirstParty = try container.decodeIfPresent(Bool.self, forKey: .isFirstParty) ?? false
         hours = try container.decodeIfPresent(FindBusinessHours.self, forKey: .hours)
+        address = try container.decodeIfPresent(String.self, forKey: .address)
+        phone = try container.decodeIfPresent(String.self, forKey: .phone)
+        rssSource = try container.decodeIfPresent(String.self, forKey: .rssSource)
+        publishedAt = try container.decodeIfPresent(String.self, forKey: .publishedAt)
     }
 }
 
@@ -226,9 +265,12 @@ struct FindSearchResponse: Codable, Hashable {
     let answer: FindAnswerBlock?
     let weather: FindWeatherInfo?
     let conversion: FindConversionResult?
+    let movieRatings: FindMovieRatings?
     let results: [FindRankedResult]
     let selectedIndex: Int
     let timings: FindSearchTimings?
+    // True when the results are News/Sports headlines from the RSS snapshot.
+    let rssBacked: Bool?
 }
 
 struct FindSearchRequest: Encodable {
@@ -238,6 +280,23 @@ struct FindSearchRequest: Encodable {
     let postalCode: String?
     let latitude: Double?
     let longitude: Double?
+}
+
+enum FindFeedbackRating: String, Encodable, CaseIterable {
+    case excellent, good, fair, poor
+
+    var label: String { rawValue.capitalized }
+}
+
+struct FindFeedbackRequest: Encodable {
+    let rating: FindFeedbackRating
+    let comment: String?
+    let query: String?
+    let queryType: String?
+}
+
+struct FindFeedbackResponse: Decodable {
+    let success: Bool?
 }
 
 struct FindSummarizeRequest: Encodable {

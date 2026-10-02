@@ -18,6 +18,7 @@ final class SearchViewModel: ObservableObject {
     // treating it as a replacement for the top-ranked source card.
     @Published var viewingGroundedAnswer = false
 
+    let feedbackStore: FindFeedbackStore
     private let apiClient: FindAPIClient
     private let awardsService: FindAwardsService
     private let locationService: FindLocationService
@@ -48,6 +49,7 @@ final class SearchViewModel: ObservableObject {
 
     init(apiClient: FindAPIClient, awardsService: FindAwardsService, locationService: FindLocationService) {
         self.apiClient = apiClient
+        self.feedbackStore = FindFeedbackStore(apiClient: apiClient)
         self.awardsService = awardsService
         self.locationService = locationService
         loadHistory()
@@ -189,9 +191,11 @@ private extension FindSearchResponse {
             answer: answer,
             weather: weather,
             conversion: localConversion,
+            movieRatings: movieRatings,
             results: [],
             selectedIndex: 0,
-            timings: timings
+            timings: timings,
+            rssBacked: nil
         )
     }
 }
