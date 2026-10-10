@@ -53,7 +53,7 @@ final class FindAwardsService: ObservableObject {
         FindAward(id: "sharp-eye", title: "The Sharp Eye", threshold: 15,
                   copy: "Something felt off and you were right.", icon: .sharpEye),
         FindAward(id: "explorer", title: "The Explorer", threshold: 20,
-                  copy: "One answer was never going to be enough for you.", icon: .explorer),
+                  copy: "One result was never going to be enough for you.", icon: .explorer),
         FindAward(id: "specialist", title: "The Specialist", threshold: 30,
                   copy: "You stopped skimming. You went all the way down.", icon: .specialist),
         FindAward(id: "relentless", title: "The Relentless", threshold: 40,

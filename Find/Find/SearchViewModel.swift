@@ -266,7 +266,7 @@ private enum LocalConversionParser {
             outputUnitLabel: output.label,
             rate: rate,
             rateUpdatedAt: nil,
-            source: input.category == .currency ? "Find answer" : "Find local conversion"
+            source: input.category == .currency ? "Find results" : "Find local conversion"
         )
     }
 

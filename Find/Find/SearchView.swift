@@ -25,7 +25,7 @@ struct SearchView: View {
 
     private enum BottomTab: String, CaseIterable {
         case home = "HOME"
-        case grid = "GRID"
+        case grid = "ALL"
         case history = "HISTORY"
         case info = "INFO"
         case awards = "AWARDS"
@@ -725,7 +725,7 @@ struct SearchView: View {
                         if !results.isEmpty {
                         HStack(spacing: 0) {
                             if viewModel.viewingGroundedAnswer {
-                                Text("Answer").foregroundStyle(Theme.muted)
+                                Text("Results").foregroundStyle(Theme.muted)
                             } else {
                                 Text("\(selectedResultIndex + 1)").bold().foregroundStyle(Theme.text)
                                 Text(" of \(results.count)").foregroundStyle(Theme.muted)
@@ -780,175 +780,22 @@ struct SearchView: View {
         return conversionCategory == .currency ? "Currency conversion" : "Unit conversion"
     }
 
-    // Original grid: equal boxes separated by hairlines - 2 up on iPhone,
-    // 3 up on iPad (capped and centered so tiles don't get huge).
+    // All results: see ResultGridView (design_handoff_find_grid_about_help).
     private func gridView(screenWidth: CGFloat) -> some View {
-        let columnCount = screenWidth >= 600 ? 3 : 2
-        let gridWidth = min(screenWidth, 960)
-        let tileWidth = (gridWidth - CGFloat(columnCount - 1)) / CGFloat(columnCount)
-        let columns = Array(repeating: GridItem(.fixed(tileWidth), spacing: 1), count: columnCount)
-
-        return VStack(spacing: 0) {
-            gridHeader(screenWidth: screenWidth)
-
-            ScrollView(showsIndicators: false) {
-                if results.isEmpty {
-                    emptyState("Run a search first.")
-                        .frame(width: screenWidth)
-                } else {
-                    LazyVGrid(columns: columns, spacing: 1) {
-                        ForEach(Array(results.enumerated()), id: \.element.id) { index, result in
-                            GridTile(
-                                result: result,
-                                query: baseQuery,
-                                size: CGSize(width: tileWidth, height: (tileWidth * 1.15).rounded()),
-                                isSelected: index == selectedResultIndex
-                            ) {
-                                // Find is meant to take you to the thing you found,
-                                // not into another in-app detail screen.
-                                if let url = URL(string: result.url) {
-                                    openURL(url)
-                                }
-                            }
-                        }
-
-                        // Blank out the rest of a short last row so the
-                        // hairline backdrop doesn't show as a gray block.
-                        let remainder = results.count % columnCount
-                        ForEach(0..<(remainder == 0 ? 0 : columnCount - remainder), id: \.self) { _ in
-                            Theme.background
-                                .frame(width: tileWidth, height: (tileWidth * 1.15).rounded())
-                        }
-                    }
-                    .background(Theme.hairline)
-                    .overlay(alignment: .bottom) {
-                        Rectangle().fill(Theme.hairline).frame(height: 1)
-                    }
-                    .frame(width: gridWidth)
-                    .frame(maxWidth: .infinity)
-                    .padding(.bottom, 150)
+        ResultGridView(
+            results: results,
+            query: baseQuery,
+            selectedIndex: selectedResultIndex,
+            screenWidth: screenWidth,
+            onBack: { selectedTab = .home },
+            onOpen: { result in
+                // Find is meant to take you to the thing you found,
+                // not into another in-app detail screen.
+                if let url = URL(string: result.url) {
+                    openURL(url)
                 }
             }
-            .background(Theme.background)
-        }
-    }
-
-    // Fixed above the scrolling grid (not inside the ScrollView), so it
-    // stays put while results scroll underneath - same treatment as the
-    // result shelf. Replaces the old plain "All results" heading with a
-    // back button, matching the web app: tapping it returns to the single
-    // current result instead of just being inert page-title text.
-    private func gridHeader(screenWidth: CGFloat) -> some View {
-        HStack {
-            Button {
-                selectedTab = .home
-            } label: {
-                navLabel("Back", chevron: "chevron.left", leading: true)
-            }
-            .buttonStyle(.plain)
-            .contentShape(Rectangle())
-            .accessibilityLabel("Back to result")
-
-            Spacer()
-
-            Text("\(results.count) found")
-                .font(Theme.font(14, weight: .semibold))
-                .foregroundStyle(Theme.subtext)
-
-            Color.clear
-                .frame(width: 8, height: 1)
-        }
-        .padding(.horizontal, 12)
-        .frame(width: screenWidth)
-        .padding(.vertical, 6)
-        .background(Theme.chrome)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Theme.hairline)
-                .frame(height: 1)
-        }
-    }
-
-    private struct GridTile: View {
-        let result: FindRankedResult
-        let query: String
-        let size: CGSize
-        let isSelected: Bool
-        let onSelect: () -> Void
-
-        @State private var imageFailed = false
-
-        private var imageURL: URL? {
-            guard !result.imageUrl.isEmpty else { return nil }
-            return URL(string: result.imageUrl)
-        }
-
-        private var showsImage: Bool {
-            imageURL != nil && !imageFailed
-        }
-
-        var body: some View {
-            Button(action: onSelect) {
-                VStack(alignment: .leading, spacing: 0) {
-                    if showsImage, let imageURL {
-                        AsyncImage(url: imageURL) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .scaledToFill()
-                            case .failure:
-                                Color.clear
-                                    .onAppear { imageFailed = true }
-                            default:
-                                Rectangle()
-                                    .fill(Theme.surface)
-                            }
-                        }
-                        .frame(width: size.width, height: (size.height * 0.55).rounded())
-                        .clipped()
-                    }
-
-                    // Headline plus a short summary under an image; without an
-                    // image the text starts at the top and fills the whole box.
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(highlighted(result.title, query: query))
-                            .font(.system(size: size.width >= 200 ? 16 : 15, weight: .bold))
-                            .foregroundStyle(Theme.text)
-                            .multilineTextAlignment(.leading)
-                            .lineLimit(3)
-
-                        if !result.summary.isEmpty {
-                            Text(highlighted(result.summary, query: query))
-                                .font(Theme.font(13))
-                                .foregroundStyle(Theme.subtext)
-                                .multilineTextAlignment(.leading)
-                                .lineLimit(showsImage ? 2 : nil)
-                        }
-
-                        Spacer(minLength: 0)
-
-                        Text(result.displayUrl)
-                            .font(Theme.font(11))
-                            .foregroundStyle(Theme.subtext)
-                            .lineLimit(1)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.top, showsImage ? 8 : 12)
-                    .padding(.bottom, 8)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                }
-                .frame(width: size.width, height: size.height, alignment: .top)
-                .clipped()
-                .background(Theme.background)
-                .overlay {
-                    if isSelected {
-                        Rectangle().stroke(Theme.text, lineWidth: 2)
-                    }
-                }
-            }
-            .buttonStyle(.plain)
-        }
+        )
     }
 
     private func historyView(screenWidth: CGFloat) -> some View {
@@ -1056,7 +903,7 @@ struct SearchView: View {
                 infoCard("01", "One destination, not a list", "Find picks the single strongest result instead of showing you 10 blue links. Swipe to see alternatives.")
                 infoCard("02", "Context pills & drill-down", "Tap a pill in the bottom bar to refine your search context. Find keeps your original query intact and swaps the active refinement instead of stacking duplicates.")
                 infoCard("03", "People → Lead Vault", "Find shows the best web results first. When a query looks like a person, buyer, or prospect, you can continue the search in Lead Vault when you’re ready.")
-                infoCard("04", "The philosophy", "Most search tools optimize for clicks. Find optimizes for answers. We believe the best search experience ends with you knowing something — not choosing between 10 links that might.")
+                infoCard("04", "The philosophy", "Most search tools optimize for clicks. Find optimizes for the right result. We believe the best search experience ends with you knowing something — not choosing between 10 links that might.")
 
                 VStack(spacing: 6) {
                     Text("BUILT BY")
@@ -1395,7 +1242,7 @@ struct SearchView: View {
 
     private func bottomBar(screenWidth: CGFloat, bottomInset: CGFloat) -> some View {
         HStack(spacing: 0) {
-            // In the grid, the grid button becomes Home so there's an obvious
+            // In All results, the All button becomes Home so there's an obvious
             // way back to a new search.
             let tabs = BottomTab.allCases
                 .filter { $0 != .home }
@@ -1799,19 +1646,6 @@ struct SearchView: View {
     }
 
     /// "‹ Back" / "Next ›" - a word beside the chevron so it reads as navigation.
-    private func navLabel(_ title: String, chevron: String, leading: Bool) -> some View {
-        HStack(spacing: 3) {
-            if leading {
-                Image(systemName: chevron).font(.system(size: 15, weight: .regular))
-            }
-            Text(title).font(Theme.font(15, weight: .medium))
-            if !leading {
-                Image(systemName: chevron).font(Theme.font(15, weight: .regular))
-            }
-        }
-        .foregroundStyle(Theme.subtext)
-        .frame(minWidth: 64, minHeight: 44, alignment: leading ? .leading : .trailing)
-    }
 
     private func goToNextResult() {
         if viewModel.viewingGroundedAnswer {

@@ -315,7 +315,7 @@ struct ResultPageView: View {
 
     private var answerTagText: String {
         let count = response.answer?.references.count ?? 0
-        return count > 0 ? "Answer · from \(count) sources" : "Answer"
+        return count > 0 ? "Results · from \(count) sources" : "Results"
     }
 
     /// Thumbnail (when there's no article image) beside the tag and "source · time".
@@ -579,7 +579,7 @@ struct ResultPageView: View {
                   response.queryType != .question {
             parts.append("TODD summary")
         } else if response.queryType == .question {
-            parts.append(isGroundedAnswerSlide ? "grounded answer" : "supporting result")
+            parts.append(isGroundedAnswerSlide ? "results summary" : "supporting result")
         }
 
         return parts.joined(separator: " · ")
