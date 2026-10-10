@@ -98,6 +98,8 @@ struct FindConversionResult: Codable, Hashable {
     let rate: Double?
     let rateUpdatedAt: String?
     let source: String?
+    /// Every supported currency against inputUnit (backend conversions only).
+    var rates: [String: Double]? = nil
 }
 
 // OMDb details the backend attaches to a `movie` answer (results is empty).

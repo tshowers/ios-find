@@ -385,9 +385,14 @@ private struct GridCard: View {
     private var contact: some View {
         let address = result.address ?? ""
         let phone = result.phone ?? ""
-        if !address.isEmpty || !phone.isEmpty {
+        // A place's distance ("0.5 mi") arrives as a pill, as on the web
+        // (cardDistance in find-home.component.ts).
+        let distance = result.pills.first { $0.range(of: #"^\d+(\.\d+)?\s*mi$"#, options: .regularExpression) != nil } ?? ""
+        if !address.isEmpty || !phone.isEmpty || !distance.isEmpty {
             VStack(alignment: .leading, spacing: 2) {
-                if !address.isEmpty { Text(address) }
+                if !address.isEmpty || !distance.isEmpty {
+                    Text(address.isEmpty ? distance : distance.isEmpty ? address : "\(address) · \(distance)")
+                }
                 if !phone.isEmpty { Text(phone).fontWeight(.semibold) }
             }
             .font(Theme.font(13))

@@ -909,26 +909,30 @@ struct SearchView: View {
                     Text("BUILT BY")
                         .font(Theme.font(13, weight: .black))
                         .foregroundStyle(Theme.subtext)
-                    Text("Taliferro Tech")
+                    Link(TaliferroCompany.name, destination: TaliferroCompany.url)
                         .font(Theme.font(22, weight: .bold))
+                        .foregroundStyle(Theme.accent)
                     Text("Find is part of TODD — the Momentum System designed for teams that move fast and need information faster.")
                         .font(Theme.font(15))
                         .foregroundStyle(Theme.subtext)
                         .multilineTextAlignment(.center)
 
                     HStack(spacing: 14) {
-                        Link("ty.showers@taliferro.com", destination: URL(string: "mailto:ty.showers@taliferro.com")!)
-                        Link("taliferro.com", destination: URL(string: "https://taliferro.com")!)
+                        Link(TaliferroCompany.email, destination: URL(string: "mailto:\(TaliferroCompany.email)")!)
+                        Link("taliferro.tech", destination: TaliferroCompany.url)
                     }
                     .font(Theme.font(14, weight: .semibold))
                     .foregroundStyle(Theme.accent)
                     .padding(.top, 6)
 
-                    Text(LocalizedStringKey("© \(currentYear) TODD. Site design [Taliferro Group](https://taliferro.com/website-development). Taliferro Is Registered In The U.S. Patent And Trademark Office. All rights reserved. | [Contact](https://taliferro.com/contact.html)"))
+                    // Same policy links as the web Info screen (MENU_COMPANY in @taliferro/ui).
+                    FlowLinks(links: TaliferroCompany.links)
+                        .padding(.top, 10)
+
+                    Text(verbatim: "© \(currentYear) \(TaliferroCompany.legalName). Taliferro Is Registered In The U.S. Patent And Trademark Office. All rights reserved.")
                         .font(Theme.font(12))
                         .foregroundStyle(Theme.subtext)
                         .multilineTextAlignment(.center)
-                        .tint(Theme.accent)
                         .padding(.top, 12)
 
                     if let appVersionLabel {
@@ -1480,6 +1484,11 @@ struct SearchView: View {
         } else if conversionInputUnit == conversionBaseOutputUnit && conversionOutputUnit == conversionBaseInputUnit,
                   let baseRate = conversionBaseRate, baseRate != 0 {
             conversionRate = 1 / baseRate
+        } else if let rates = viewModel.searchResponse?.conversion?.rates,
+                  let inputRate = rates[conversionInputUnit], let outputRate = rates[conversionOutputUnit], inputRate != 0 {
+            // Backend conversions carry every supported currency's rate
+            // against the original input, so any pair can be worked out.
+            conversionRate = outputRate / inputRate
         } else {
             conversionRate = nil
         }
