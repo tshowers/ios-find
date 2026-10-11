@@ -51,6 +51,8 @@ enum Theme {
     static let chrome = bg
 
     // Query terms in the Grid stay red, as in the original release.
+    // Error text (--danger in taliferro-ui tokens.css).
+    static let danger = adaptive(light: 0xd92d4a, dark: 0xff6b81)
     static let highlightRed = adaptive(light: 0xd0021b, dark: 0xff5a5f)
 
     // MARK: Type

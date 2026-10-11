@@ -17,6 +17,10 @@ final class SearchViewModel: ObservableObject {
     // answer.text as a slide *before* the ranked results, rather than
     // treating it as a replacement for the top-ranked source card.
     @Published var viewingGroundedAnswer = false
+    // "Use my location" on the Info tab (useLocationEverywhere in
+    // find-home.component.ts): off by default. When on, every search sends
+    // the position; when off, only "near me" and bare weather searches do.
+    @Published private(set) var useLocationEverywhere = UserDefaults.standard.bool(forKey: "find.useLocation")
 
     let feedbackStore: FindFeedbackStore
     private let apiClient: FindAPIClient
@@ -40,6 +44,46 @@ final class SearchViewModel: ObservableObject {
         pattern: #"^(?:(?:what'?s|what is|how'?s|how is|the)\s+)?(?:weather|forecast|temperature)(?:\s+(?:like|today|tomorrow|tonight|right now|currently|this week|this weekend|now))?[?.!]*$"#,
         options: [.caseInsensitive]
     )
+
+    private static let openNowPattern = try! NSRegularExpression(
+        pattern: #"\b(?:open\s+(?:right\s+)?now|currently\s+open)\b"#,
+        options: [.caseInsensitive]
+    )
+
+    /// Turning it on asks for permission right away; returns false when the
+    /// system won't give a position (denied or unavailable).
+    @discardableResult
+    func setUseLocationEverywhere(_ enabled: Bool) async -> Bool {
+        guard enabled else {
+            useLocationEverywhere = false
+            UserDefaults.standard.set(false, forKey: "find.useLocation")
+            return true
+        }
+        let granted = await locationService.currentCoordinate() != nil
+        useLocationEverywhere = granted
+        UserDefaults.standard.set(granted, forKey: "find.useLocation")
+        return granted
+    }
+
+    /// Nearby results: re-run the search for places open right now, or back.
+    var isOpenNowSearch: Bool {
+        let current = searchResponse?.query ?? ""
+        return Self.openNowPattern.firstMatch(in: current, range: NSRange(current.startIndex..., in: current)) != nil
+    }
+
+    func toggleOpenNow() async {
+        let current = (searchResponse?.query ?? query).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !current.isEmpty else { return }
+        if isOpenNowSearch {
+            let range = NSRange(current.startIndex..., in: current)
+            query = Self.openNowPattern.stringByReplacingMatches(in: current, range: range, withTemplate: "")
+                .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+                .trimmingCharacters(in: .whitespaces)
+        } else {
+            query = "\(current) open now"
+        }
+        await runSearch()
+    }
 
     private static func isLocationShapedQuery(_ query: String) -> Bool {
         let range = NSRange(query.startIndex..., in: query)
@@ -70,7 +114,7 @@ final class SearchViewModel: ObservableObject {
         // Only requested for a location-shaped query (never on launch) -
         // resolves to nil on denial/timeout rather than throwing, so the
         // search still runs without coordinates instead of blocking.
-        let coordinate = Self.isLocationShapedQuery(trimmed)
+        let coordinate = useLocationEverywhere || Self.isLocationShapedQuery(trimmed)
             ? await locationService.currentCoordinate()
             : nil
 

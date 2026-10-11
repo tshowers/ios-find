@@ -12,6 +12,7 @@ struct SearchView: View {
     @State private var highlightedPill = ""
     @State private var activePill = ""
     @State private var conversionAmountText = ""
+    @State private var locationSettingBlocked = false
     @State private var conversionInputUnit = ""
     @State private var conversionOutputUnit = ""
     @State private var conversionRate: Double?
@@ -694,6 +695,15 @@ struct SearchView: View {
         VStack(spacing: 0) {
             resultPager(screenWidth: screenWidth)
 
+            if viewModel.searchResponse?.queryType == .local {
+                OpenNowButton(isOn: viewModel.isOpenNowSearch) {
+                    Task { await viewModel.toggleOpenNow() }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 4)
+            }
+
             Group {
                 if let response = viewModel.searchResponse {
                     if results.isEmpty {
@@ -854,8 +864,15 @@ struct SearchView: View {
                 if let url = URL(string: result.url) {
                     openURL(url)
                 }
-            }
+            },
+            openNow: gridOpenNowControl
         )
+    }
+
+    private var gridOpenNowControl: OpenNowControl? {
+        guard viewModel.searchResponse?.queryType == .local else { return nil }
+        let model = viewModel
+        return OpenNowControl(isOn: model.isOpenNowSearch, toggle: { Task { await model.toggleOpenNow() } })
     }
 
     private func historyView(screenWidth: CGFloat) -> some View {
@@ -935,6 +952,42 @@ struct SearchView: View {
         .background(Theme.cardBackground)
     }
 
+    // "Use my location" (the web's .find-info-setting card).
+    private var locationSettingCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: Binding(
+                get: { viewModel.useLocationEverywhere },
+                set: { enabled in
+                    Task {
+                        let granted = await viewModel.setUseLocationEverywhere(enabled)
+                        locationSettingBlocked = enabled && !granted
+                    }
+                }
+            )) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Use my location")
+                        .font(Theme.font(16, weight: .bold))
+                        .foregroundStyle(Theme.text)
+                    Text("Shows how far away places are on every search, not just \"near me\". Your location is sent with each search and never stored.")
+                        .font(Theme.font(13))
+                        .foregroundStyle(Theme.subtext)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .tint(Theme.accent)
+
+            if locationSettingBlocked {
+                Text("Location is off for Find. Turn it on in Settings › Privacy & Security › Location Services › Find, then try again.")
+                    .font(Theme.font(13))
+                    .foregroundStyle(Theme.danger)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
     private func infoView(screenWidth: CGFloat) -> some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 14) {
@@ -964,6 +1017,8 @@ struct SearchView: View {
                 infoCard("02", "Context pills & drill-down", "Tap a pill in the bottom bar to refine your search context. Find keeps your original query intact and swaps the active refinement instead of stacking duplicates.")
                 infoCard("03", "People → Lead Vault", "Find shows the best web results first. When a query looks like a person, buyer, or prospect, you can continue the search in Lead Vault when you’re ready.")
                 infoCard("04", "The philosophy", "Most search tools optimize for clicks. Find optimizes for the right result. We believe the best search experience ends with you knowing something — not choosing between 10 links that might.")
+
+                locationSettingCard
 
                 VStack(spacing: 6) {
                     Text("BUILT BY")
