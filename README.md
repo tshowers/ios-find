@@ -1,87 +1,97 @@
 ![Find iOS](docs/find-ios-banner.png)
 
-Native SwiftUI client for [Find](https://find.taliferro.tech) — a free,
-no-account-required search experience built by [Taliferro Tech](https://taliferro.com).
-Type any question, company, topic, or "weather in Seattle," and instead of a
-page of ten blue links, Find hands you one strong result — a synthesized
-answer, an entity summary, or a weather card — with source citations, an
-image, and a handful of context pills to drill deeper. Companion to the
-[web app](https://github.com/tshowers/find), calling the same shared
-Taliferro Tech backend.
+# Find for iPhone and iPad
 
-## Structure
+Native SwiftUI client for [Find](https://find.taliferro.tech), a free, no-account-required search experience built by [Taliferro Tech](https://taliferro.tech). Instead of ten blue links, Find hands you one strong result with context to go deeper.
 
-```
-Find/
-  FindApp.swift          App entry point
-  AppDelegate.swift       Orientation lock for tilt navigation
-  FindModels.swift        Codable response models
-  AboutModels.swift       Product-grid data for the About screen
-  AppConfig.swift         Reads FIND_API_BASE_URL / FIND_API_KEY from the bundle
-  FindAPIClient.swift      /find/search, /find/summarize
-  TiltNavigationService.swift  Gyroscope-based tilt-to-drill-down
-  Theme.swift              Light/dark adaptive color tokens
-  SearchView.swift, SearchViewModel.swift, ShareSheet.swift
-  Assets.xcassets          App icon, accent color, Find logo
-  PrivacyInfo.xcprivacy
-```
+This app is a hand-built port of the **web app** ([`web-products/find`](https://github.com/tshowers/find)) and is kept in step with it feature by feature. Both call the same shared Taliferro Tech backend. **Start with the web README**: it has the full API list, backend settings, the repo map and the deploy order. This file covers what's specific to iOS.
 
-Bundle ID: `tech.taliferro.Find`.
-
-## Setup
-
-Open `Find.xcodeproj` directly in Xcode — the project uses Xcode's
-file-system-synchronized groups, so any file dropped into `Find/Find/`
-is picked up automatically.
-
-Before running on a device, set your own signing team in the target's
-Signing & Capabilities tab (or edit `DEVELOPMENT_TEAM` in
-`project.pbxproj`).
-
-## Configuration
-
-The app reads `FIND_API_BASE_URL` from the bundle (see `AppConfig.swift`),
-currently pointed at the shared Taliferro Tech backend
-(`https://api.taliferro.tech/api`) — the same endpoints
-(`POST /find/search`, `POST /find/summarize`) the web app calls.
+Bundle ID `tech.taliferro.Find` · Team `6377FLHLAG` · Version **1.4 (7)** · iOS/iPadOS **17.0+**
 
 ## Features
 
-- **One strong result, not a list** — a single answer or entity card up
-  front; page through the other candidates with the shelf's back/forward
-  chevrons or a left/right swipe
-- **Grounded question answers** — for question-style queries ("what's the
-  tallest animal on land"), Find synthesizes a short answer from multiple
-  sources and shows a References section of the actual citations, each a
-  tappable link to the source. Paging away from that first slide switches to
-  each individual result's own title/summary/source, exactly like the grid
-  shows for it
-- **Weather mode** — a dedicated weather card (temperature, condition,
-  feels-like, humidity, wind) for plain-language weather queries, with a
-  branded fallback icon if the forecast provider has none
-- **Context pills & drill-down** — up to 4 refinement pills per result;
-  tapping one appends it to the current query and re-runs the search
-- **Tilt navigation** — an optional gyroscope-based way to drill into a pill
-  without touching the screen: flick the device toward a pill (left/right/
-  up/down) to open it. Locks the device to portrait for the duration so the
-  gesture doesn't fight with screen rotation
-- **Grid view** — all candidate results as a two-column grid; tapping a tile
-  opens that result's actual source, not an in-app detail screen — Find is
-  meant to take you to the thing you found
-- **Search history**
-- **Trusted-source curation** — the backend excludes social/video feeds and
-  a handful of low-quality aggregators outright, prefers a tiered list of
-  wire services, investigative newsrooms, and public broadcasters for news
-  results, and swaps in Taliferro-branded cards for those trusted sources
-  instead of whatever image the source itself returns
-- **Dark mode** — follows the system appearance, with a palette matching the
-  web app's own light/dark tokens
-- **About screen** — a "More from Taliferro Tech" / "Momentum system"
-  product grid linking out to the rest of the TODD product family
-- **Share sheet** for the current result
+Everything in the web app (exact answers, places with distance and Open now, every location of a business, "why this result", follow-ups, Watch, share links, Save to Knowledge, weather, movies, headlines, history, awards, tilt navigation), plus:
 
-## For ad-hoc export builds
+- **Watch notifications.** A push when a watched find changes; tapping it opens that search.
+- **"Find" in the share sheet.** Select text in Safari (or share a page) to see Find's answer in the sheet.
+- **Home-screen widget** (small, medium). A search box plus the latest Watch change.
+- **Siri and Shortcuts.** "Ask Find" / "Search Find" speaks the answer without opening the app.
 
-Copy `ExportOptions-AdHoc.plist.example` to `ExportOptions-AdHoc.plist`
-and fill in your own Apple Developer Team ID (gitignored — kept local,
-not committed).
+## Set up
+
+1. Open `Find/Find.xcodeproj` in Xcode (built with Xcode 27).
+2. Signing is **automatic** with team `6377FLHLAG`. On another team, change it on all three targets under Signing & Capabilities, and register your own App Group (below).
+3. Pick the **Find** scheme and an iPhone or iPad simulator, then press ⌘R.
+
+The project uses Xcode's **file-system-synchronized groups**: a new `.swift` file dropped into `Find/Find/`, `Find/FindShare/` or `Find/FindWidget/` joins that target automatically; no project-file edits needed. There's no test target, so check changes with a build:
+
+```bash
+cd Find
+xcodebuild -project Find.xcodeproj -scheme Find -destination 'generic/platform=iOS Simulator' -configuration Debug build
+```
+
+## Targets
+
+| Target | Folder | What it is |
+|---|---|---|
+| **Find** | `Find/Find/` | The app |
+| **FindShare** | `Find/FindShare/` | Share extension. It runs in its own process, so it has a small copy of the search call (`ShareModel.swift`) instead of using the app's client. Accepts text and web pages only (App Review rejects "accept everything"). |
+| **FindWidgetExtension** | `Find/FindWidget/` | Home-screen widget. Reads the latest Watch change from the App Group and opens the app with `find://` links. |
+
+All three must have the same version and build number; bump `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` on every target together.
+
+## Configuration
+
+| Setting | Where | What it is |
+|---|---|---|
+| `FIND_API_BASE_URL` | Build settings (Find target) | Shared API, `https://api.taliferro.tech/api`. `AppConfig.swift` falls back to this if the bundle doesn't have it. |
+| `FIND_API_KEY` | Build settings (Find target) | Public client key sent as the bearer token, the same one the web app uses (`apiKey` in its `environment.ts`). `AppConfig.swift` has the same fallback. `FindShare/ShareModel.swift` repeats both values because extensions can't read the app's bundle. |
+| App Group `group.tech.taliferro.find` | Entitlements, all three targets | Lets the widget read Watch changes (`widget.*` keys in shared `UserDefaults`) |
+| Push Notifications (`aps-environment`) | `Find/Find.entitlements` | Watch notifications. Xcode builds register as `sandbox`, archives as `production`; the app tells the backend which (`FindWatchStore.registerDevice`). |
+| `find://` URL scheme | `Find-Info.plist` (merged with the generated Info.plist) | `find://search?q=…`, `find://search`, `find://watching`; used by the widget |
+| Location permission text | `INFOPLIST_KEY_NSLocationWhenInUseUsageDescription` | Weather, "near me", and the optional Use my location switch |
+| Privacy manifest | `Find/Find/PrivacyInfo.xcprivacy` | Declares coarse location, search history and device ID (app functionality only, not linked, no tracking). **The App Store privacy label must match it.** |
+
+Apple Developer setup already done for this app ID: Push Notifications enabled and App Group registered. The backend's Apple push key is team-wide (shared with Outreach, Pulse and Maya), so no certificate is needed.
+
+**Per-device state** (`UserDefaults`): search history, awards, `find.useLocation`, `find.deviceId` (random id for Watch, no account), `find.hasWatches`.
+
+## Code map
+
+```
+Find/Find/
+  FindApp.swift              Entry point; creates the API client and FindWatchStore
+  AppDelegate.swift          Orientation lock (tilt), push token, notification taps
+  AppConfig.swift            API base URL and key
+  FindAPIClient.swift        Every backend call (search, summarize, followup, share, watches, devices, feedback)
+  FindModels.swift           Codable request/response types; mirrors find-experience.service.ts
+  SearchViewModel.swift      Search, history, location switch, Open now, follow-ups, share links
+  SearchView.swift           Home, results, All, History (+ Watching), Info, Awards, Share; tab bar
+  ResultPageView.swift       One result page (actions, locations, why-this-result, follow-up, Watch)
+  FindResultPagerView.swift  Page-curl pager around ResultPageView (UIKit); pass new inputs through it
+  ResultGridView.swift       All: 4 layouts by width, like the web; Open now button
+  FindWatchStore.swift       Watch a find: list, create/remove/renew, notifications, widget data
+  FollowupBox.swift          "Ask about this result"
+  WatchButton.swift          Watch / Watching button
+  AskFindIntent.swift        Siri / Shortcuts
+  FindLocationService.swift  Location, asked only when needed
+  TaliferroCompany.swift     Company and policy links (mirrors MENU_COMPANY in taliferro-ui)
+  Theme.swift                Colour tokens (match the web's)
+```
+
+## Rules worth knowing
+
+- **Keep it in step with the web app.** Comments name the matching web code (`find-home.component.ts`, …); port changes both ways.
+- **Send `features` and `timeZone`.** `FindAPIClient.search` sends `features: ["instant", "units"]`. A new answer type needs a new feature string, here and on the web, so older App Store versions keep working.
+- **`FindQueryType` has an `.unknown` fallback, but `FindConversionCategory` doesn't.** An unknown conversion category fails the whole response. Add new categories to the enum before the backend sends them.
+- **Pages inside `FindResultPagerView` can't see the environment.** They live in `UIHostingController`s, so pass new inputs explicitly (see `followupActions`, `watchStore`).
+
+## Release
+
+1. Destination **Any iOS Device (arm64)** → **Product → Archive** → **Distribute App → App Store Connect → Upload**.
+2. In App Store Connect: new version, What's New, pick the build, update **App Privacy** if `PrivacyInfo.xcprivacy` changed, then submit.
+3. Make sure any backend changes the release needs are already deployed.
+
+For ad-hoc builds, copy `ExportOptions-AdHoc.plist.example` to `ExportOptions-AdHoc.plist` and fill in your team ID (it's gitignored).
+
+See `CHANGELOG.md` for release history.
