@@ -10,16 +10,24 @@ import SwiftUI
 @main
 struct FindApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    private let apiClient = FindAPIClient(config: .fromBundle())
+    private let apiClient: FindAPIClient
     private let awardsService = FindAwardsService()
     private let locationService = FindLocationService()
+    @StateObject private var watchStore: FindWatchStore
+
+    init() {
+        let client = FindAPIClient(config: .fromBundle())
+        apiClient = client
+        _watchStore = StateObject(wrappedValue: FindWatchStore(apiClient: client))
+    }
 
     var body: some Scene {
         WindowGroup {
             NavigationStack {
                 SearchView(
                     viewModel: SearchViewModel(apiClient: apiClient, awardsService: awardsService, locationService: locationService),
-                    awardsService: awardsService
+                    awardsService: awardsService,
+                    watchStore: watchStore
                 )
             }
             // Every screen is a fixed-pixel custom layout (circular tab

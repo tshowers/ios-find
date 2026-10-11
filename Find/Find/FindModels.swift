@@ -344,6 +344,47 @@ struct FindFeedbackResponse: Decodable {
     let success: Bool?
 }
 
+/// A watched result (FindWatch in find-experience.service.ts).
+struct FindWatch: Decodable, Identifiable, Hashable {
+    let id: String
+    let query: String
+    let url: String
+    let title: String
+    let kind: String
+    let createdAt: Double
+    let expiresAt: Double
+    let expired: Bool
+    let lastCheckedAt: Double?
+    let lastChange: FindWatchChange?
+    let changed: Bool
+    let current: String
+}
+
+struct FindWatchChange: Decodable, Hashable {
+    let at: Double
+    let summary: String
+}
+
+struct FindWatchRequest: Encodable {
+    let deviceId: String
+    var id: String? = nil
+    var query: String? = nil
+    var url: String? = nil
+    var title: String? = nil
+    var queryType: String? = nil
+    var address: String? = nil
+    var phone: String? = nil
+    var apnsToken: String? = nil
+    var environment: String? = nil
+}
+
+struct FindWatchResponse: Decodable {
+    let success: Bool
+    let watch: FindWatch?
+    let watches: [FindWatch]?
+    let message: String?
+}
+
 struct FindFollowupRequest: Encodable {
     let query: String
     let followup: String

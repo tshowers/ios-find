@@ -58,6 +58,11 @@ final class FindAPIClient {
         return String(query[zipRange])
     }
 
+    /// "Watch a find" endpoints (/find/watches…, /find/devices); all POSTs.
+    func watch(_ path: String, _ payload: FindWatchRequest) async throws -> FindWatchResponse {
+        try await post(path: path, payload: payload, responseType: FindWatchResponse.self)
+    }
+
     func followup(_ payload: FindFollowupRequest) async throws -> FindFollowupResponse {
         try await post(path: "find/followup", payload: payload, responseType: FindFollowupResponse.self)
     }

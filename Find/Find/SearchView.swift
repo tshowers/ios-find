@@ -3,6 +3,7 @@ import SwiftUI
 struct SearchView: View {
     @StateObject private var viewModel: SearchViewModel
     @ObservedObject private var awardsService: FindAwardsService
+    @ObservedObject private var watchStore: FindWatchStore
     @StateObject private var tiltNav = TiltNavigationService()
     @State private var selectedTab: BottomTab = .home
     @State private var showingShareSheet = false
@@ -71,9 +72,10 @@ struct SearchView: View {
         FindQuickAction(label: "Events", systemImage: "calendar", background: Theme.surface, foreground: Theme.muted, query: "events near me", disabled: true),
     ]
 
-    init(viewModel: SearchViewModel, awardsService: FindAwardsService) {
+    init(viewModel: SearchViewModel, awardsService: FindAwardsService, watchStore: FindWatchStore) {
         _viewModel = StateObject(wrappedValue: viewModel)
         self.awardsService = awardsService
+        self.watchStore = watchStore
     }
 
     var body: some View {
@@ -149,8 +151,28 @@ struct SearchView: View {
         .onChange(of: tiltNav.tilt) { _, newValue in
             handleTilt(newValue)
         }
+        .onChange(of: selectedTab) { _, tab in
+            if tab == .history { Task { await watchStore.refresh(markSeen: true) } }
+        }
+        // A tapped Watch notification opens its search (also on a cold launch).
+        .onReceive(NotificationCenter.default.publisher(for: .findOpenWatchedQuery)) { _ in
+            openPendingWatchQuery()
+        }
+        .onAppear { openPendingWatchQuery() }
         .onDisappear {
             tiltNav.disable()
+        }
+    }
+
+    private func openPendingWatchQuery() {
+        guard let query = AppDelegate.pendingWatchQuery else { return }
+        AppDelegate.pendingWatchQuery = nil
+        selectedTab = .home
+        Task {
+            await viewModel.runHistorySearch(query)
+            if viewModel.searchResponse != nil {
+                showingSearchScreen = false
+            }
         }
     }
 
@@ -711,9 +733,9 @@ struct SearchView: View {
                         // exactly one page to show - nothing to swipe between,
                         // and the shelf chevrons are already disabled for
                         // this case (see resultShelf).
-                        ResultPageView(response: response, pageIndex: hasLeadingAnswer ? -1 : 0, screenWidth: screenWidth, feedbackStore: viewModel.feedbackStore, followupActions: followupActions)
+                        ResultPageView(response: response, pageIndex: hasLeadingAnswer ? -1 : 0, screenWidth: screenWidth, feedbackStore: viewModel.feedbackStore, followupActions: followupActions, watchStore: watchStore)
                     } else {
-                        FindResultPagerView(response: response, currentIndex: pagingIndexBinding, screenWidth: screenWidth, feedbackStore: viewModel.feedbackStore, followupActions: followupActions, hasLeadingAnswer: hasLeadingAnswer)
+                        FindResultPagerView(response: response, currentIndex: pagingIndexBinding, screenWidth: screenWidth, feedbackStore: viewModel.feedbackStore, followupActions: followupActions, watchStore: watchStore, hasLeadingAnswer: hasLeadingAnswer)
                     }
                 }
             }
@@ -883,6 +905,65 @@ struct SearchView: View {
         return OpenNowControl(isOn: model.isOpenNowSearch, toggle: { Task { await model.toggleOpenNow() } })
     }
 
+    // "Watching" at the top of History (the web's .find-watching section).
+    private var watchingSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("WATCHING")
+                    .font(Theme.font(12, weight: .bold))
+                    .tracking(0.8)
+                    .foregroundStyle(Theme.muted)
+                Spacer()
+                Text("\(watchStore.watches.count) of \(FindWatchStore.maxWatches)")
+                    .font(Theme.font(12))
+                    .foregroundStyle(Theme.muted)
+            }
+            ForEach(watchStore.watches) { watch in
+                let highlighted = watch.changed || watchStore.highlightedIDs.contains(watch.id)
+                HStack(spacing: 12) {
+                    Button {
+                        selectedTab = .home
+                        Task {
+                            await viewModel.runHistorySearch(watch.query)
+                            if viewModel.searchResponse != nil { showingSearchScreen = false }
+                        }
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(watch.current.isEmpty ? watchStore.kindLabel(watch) : "\(watchStore.kindLabel(watch)) · \(watch.current)")
+                                .font(Theme.font(12, weight: .bold))
+                                .foregroundStyle(highlighted ? Theme.tBlueFg : Theme.muted)
+                            Text(watch.title)
+                                .font(Theme.font(15, weight: .semibold))
+                                .foregroundStyle(Theme.text)
+                                .lineLimit(1)
+                            Text(watchStore.status(watch))
+                                .font(Theme.font(13, weight: highlighted ? .semibold : .regular))
+                                .foregroundStyle(highlighted ? Theme.tBlueFg : Theme.muted)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
+
+                    VStack(alignment: .trailing, spacing: 6) {
+                        if watch.expired || watchStore.daysLeft(watch) <= 5 {
+                            Button(watch.expired ? "Watch again" : "Renew") { Task { await watchStore.renew(watch) } }
+                        }
+                        Button("Stop") { Task { await watchStore.remove(watch) } }
+                            .accessibilityLabel("Stop watching \(watch.title)")
+                    }
+                    .font(Theme.font(13, weight: .semibold))
+                    .foregroundStyle(Theme.blueInk)
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(highlighted ? Theme.tBlue : Theme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .opacity(watch.expired ? 0.7 : 1)
+            }
+        }
+    }
+
     private func historyView(screenWidth: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
@@ -919,6 +1000,10 @@ struct SearchView: View {
                             .stroke(Theme.border, lineWidth: 1)
                     )
                 }
+            }
+
+            if !watchStore.watches.isEmpty {
+                watchingSection
             }
 
             if viewModel.searchHistory.isEmpty {
@@ -1394,6 +1479,18 @@ struct SearchView: View {
                         Image(systemName: tab.systemImage)
                             .font(.system(size: 20, weight: selectedTab == tab ? .semibold : .regular))
                             .frame(height: 22)
+                            .overlay(alignment: .topTrailing) {
+                                // Changed watches (the web's .find-tab__badge).
+                                if tab == .history, watchStore.changedCount > 0 {
+                                    Text("\(watchStore.changedCount)")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 4)
+                                        .frame(minWidth: 16, minHeight: 16)
+                                        .background(Theme.danger, in: Capsule())
+                                        .offset(x: 10, y: -6)
+                                }
+                            }
                         Text(tab.rawValue.capitalized)
                             .font(Theme.font(11, weight: selectedTab == tab ? .semibold : .regular))
                     }
@@ -1822,7 +1919,10 @@ struct SearchView: View {
                 awardsService: awardsService,
                 locationService: FindLocationService()
             ),
-            awardsService: awardsService
+            awardsService: awardsService,
+            watchStore: FindWatchStore(apiClient: FindAPIClient(
+                config: AppConfig(apiBaseURL: URL(string: "https://api.taliferro.tech/api")!, apiKey: "preview")
+            ))
         )
     }
 }

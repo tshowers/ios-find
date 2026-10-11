@@ -15,6 +15,7 @@ struct FindResultPagerView: UIViewControllerRepresentable {
     let screenWidth: CGFloat
     let feedbackStore: FindFeedbackStore
     var followupActions: FindFollowupActions?
+    var watchStore: FindWatchStore?
     /// When true, page index -1 is a valid page (the backend's own generated
     /// answer, ahead of every ranked result) - see ResultPageView's
     /// `isGroundedAnswerSlide`.
@@ -79,7 +80,8 @@ struct FindResultPagerView: UIViewControllerRepresentable {
                         guard let self, self.parent.response.results.indices.contains(index + 1) else { return }
                         self.parent.currentIndex = index + 1
                     },
-                    followupActions: parent.followupActions
+                    followupActions: parent.followupActions,
+                    watchStore: parent.watchStore
                 )
             )
             host.view.backgroundColor = .clear

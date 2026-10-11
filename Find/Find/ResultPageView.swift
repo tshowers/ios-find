@@ -16,6 +16,8 @@ struct ResultPageView: View {
     var onNext: (() -> Void)?
     /// "Ask about this result"; nil hides the box.
     var followupActions: FindFollowupActions?
+    /// "Watch a find"; nil hides the Watch button.
+    var watchStore: FindWatchStore?
 
     @Environment(\.openURL) private var openURL
     @State private var ownImageFailed = false
@@ -95,6 +97,8 @@ struct ResultPageView: View {
                 if !response.isHeadline, !actions.isEmpty {
                     FindActionTiles(actions: actions)
                 }
+
+                watchButton
 
                 if let hours = businessHours {
                     hoursCard(hours)
@@ -268,6 +272,24 @@ struct ResultPageView: View {
     // answer - see FindResultPagerView's `hasLeadingAnswer` - so it never
     // co-opts a real ranked result's slot; page 0..<results.count always
     // shows that result's own title/summary/source, same as the grid does.
+    // Same rule as canWatch in find-home.component.ts: a real result, not a
+    // conversion, instant answer, weather, movie or question.
+    @ViewBuilder
+    private var watchButton: some View {
+        let unwatchable: [FindQueryType] = [.conversion, .instant, .weather, .question, .movie]
+        if let watchStore, let result, !isGroundedAnswerSlide, !unwatchable.contains(response.queryType) {
+            WatchButton(
+                store: watchStore,
+                query: response.query,
+                url: result.url,
+                title: businessName.isEmpty ? result.title : businessName,
+                queryType: response.queryType.rawString,
+                address: placeAddress.isEmpty ? nil : placeAddress,
+                phone: placePhone.isEmpty ? nil : placePhone
+            )
+        }
+    }
+
     // The answer slide asks its references; any other page asks its own result.
     private func followupBox(_ actions: FindFollowupActions) -> some View {
         let references = response.answer?.references ?? []
