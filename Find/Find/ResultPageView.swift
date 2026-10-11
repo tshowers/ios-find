@@ -66,7 +66,9 @@ struct ResultPageView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                if !businessAddress.isEmpty {
+                if !locations.isEmpty {
+                    locationsList
+                } else if !businessAddress.isEmpty {
                     Text(businessAddress)
                         .font(Theme.font(14))
                         .foregroundStyle(Theme.muted)
@@ -395,6 +397,70 @@ struct ResultPageView: View {
             actions.append(FindAction(id: "copy-link", shortLabel: "Copy", systemImage: "doc.on.doc", kind: .copy(urlString)))
         }
         return actions
+    }
+
+    /// A business with more than one verified location lists them all in its
+    /// result (currentLocations in find-home.component.ts).
+    private var locations: [FindBusinessLocation] {
+        let all = result?.locations ?? []
+        return all.count > 1 ? all : []
+    }
+
+    /// "Bonhomie Coffee Bar (at Labour Temple)" reads as "Labour Temple".
+    private func locationLabel(_ location: FindBusinessLocation) -> String {
+        if let match = location.name.range(of: #"\((?:at\s+)?[^)]+\)\s*$"#, options: [.regularExpression, .caseInsensitive]) {
+            return location.name[match]
+                .trimmingCharacters(in: CharacterSet(charactersIn: "() "))
+                .replacingOccurrences(of: #"^at\s+"#, with: "", options: [.regularExpression, .caseInsensitive])
+        }
+        if !location.name.isEmpty, location.name != businessName { return location.name }
+        return location.address.components(separatedBy: ",").first ?? location.address
+    }
+
+    private var locationsList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("\(locations.count) LOCATIONS")
+                .font(Theme.font(12, weight: .bold))
+                .tracking(0.8)
+                .foregroundStyle(Theme.muted)
+                .padding(.vertical, 8)
+            ForEach(locations, id: \.self) { location in
+                Divider()
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        let label = VStack(alignment: .leading, spacing: 2) {
+                            Text(locationLabel(location))
+                                .font(Theme.font(15, weight: .semibold))
+                                .foregroundStyle(Theme.text)
+                            Text(location.address)
+                                .font(Theme.font(14))
+                                .foregroundStyle(Theme.muted)
+                        }
+                        .multilineTextAlignment(.leading)
+                        if let maps = location.mapsUrl.flatMap(URL.init(string:)) {
+                            Link(destination: maps) { label }
+                        } else {
+                            label
+                        }
+                        if let phone = location.phone, !phone.isEmpty,
+                           let tel = URL(string: "tel:\(phone.filter { $0.isNumber || $0 == "+" })") {
+                            Link(phone, destination: tel)
+                                .font(Theme.font(14))
+                                .foregroundStyle(Theme.blueInk)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                    if let distance = location.distance {
+                        Text(distance)
+                            .font(Theme.font(14, weight: .semibold))
+                            .foregroundStyle(Theme.text)
+                    }
+                }
+                .padding(.vertical, 10)
+            }
+            Divider()
+        }
+        .frame(maxWidth: 420, alignment: .leading)
     }
 
     private var placeAddress: String {

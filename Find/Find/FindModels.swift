@@ -215,6 +215,8 @@ struct FindRankedResult: Codable, Identifiable, Hashable {
     // Set on local-business (Places) results.
     let address: String?
     let phone: String?
+    // Every verified location of a business that has more than one.
+    let locations: [FindBusinessLocation]?
     // Set on News/Sports headlines served from the hourly RSS snapshot.
     let rssSource: String?
     let publishedAt: String?
@@ -239,9 +241,18 @@ struct FindRankedResult: Codable, Identifiable, Hashable {
         hours = try container.decodeIfPresent(FindBusinessHours.self, forKey: .hours)
         address = try container.decodeIfPresent(String.self, forKey: .address)
         phone = try container.decodeIfPresent(String.self, forKey: .phone)
+        locations = try container.decodeIfPresent([FindBusinessLocation].self, forKey: .locations)
         rssSource = try container.decodeIfPresent(String.self, forKey: .rssSource)
         publishedAt = try container.decodeIfPresent(String.self, forKey: .publishedAt)
     }
+}
+
+struct FindBusinessLocation: Codable, Hashable {
+    let name: String
+    let address: String
+    let phone: String?
+    let mapsUrl: String?
+    let distance: String?
 }
 
 struct FindSearchHandoff: Codable, Hashable {
