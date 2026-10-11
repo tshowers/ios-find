@@ -1,30 +1,22 @@
-//
-//  ShareViewController.swift
-//  FindShare
-//
-//  Created by Ty Showers on 10/10/26.
-//
-
+import SwiftUI
 import UIKit
-import Social
+import UniformTypeIdentifiers
 
-class ShareViewController: SLComposeServiceViewController {
+/// "Find this" in the share sheet: Find's answer for the selected text (or
+/// the shared page's title), right there in the sheet.
+final class ShareViewController: UIViewController {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        let model = ShareModel()
+        let host = UIHostingController(rootView: ShareView(model: model) { [weak self] in
+            self?.extensionContext?.completeRequest(returningItems: nil)
+        })
+        addChild(host)
+        host.view.frame = view.bounds
+        host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.addSubview(host.view)
+        host.didMove(toParent: self)
 
-    override func isContentValid() -> Bool {
-        // Do validation of contentText and/or NSExtensionContext attachments here
-        return true
+        Task { await model.start(with: extensionContext?.inputItems as? [NSExtensionItem] ?? []) }
     }
-
-    override func didSelectPost() {
-        // This is called after the user selects Post. Do the upload of contentText and/or NSExtensionContext attachments.
-    
-        // Inform the host that we're done, so it un-blocks its UI. Note: Alternatively you could call super's -didSelectPost, which will similarly complete the extension context.
-        self.extensionContext!.completeRequest(returningItems: [], completionHandler: nil)
-    }
-
-    override func configurationItems() -> [Any]! {
-        // To add configuration options via table cells at the bottom of the sheet, return an array of SLComposeSheetConfigurationItem here.
-        return []
-    }
-
 }

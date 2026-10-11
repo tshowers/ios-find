@@ -2,6 +2,7 @@ import Combine
 import Foundation
 import UIKit
 import UserNotifications
+import WidgetKit
 
 extension Notification.Name {
     /// AppDelegate got an APNs device token (hex string in `object`).
@@ -15,7 +16,9 @@ extension Notification.Name {
 /// device has watched something, so ordinary launches make no extra request.
 @MainActor
 final class FindWatchStore: ObservableObject {
-    @Published private(set) var watches: [FindWatch] = []
+    @Published private(set) var watches: [FindWatch] = [] {
+        didSet { shareWithWidget() }
+    }
     @Published private(set) var busyKey: String?
     @Published var message = ""
     /// Changed watches stay highlighted for the visit they were first seen on.
@@ -137,6 +140,25 @@ final class FindWatchStore: ObservableObject {
         let environment = "production"
         #endif
         _ = try? await apiClient.watch("find/devices", FindWatchRequest(deviceId: deviceId, apnsToken: token, environment: environment))
+    }
+
+    // MARK: Widget
+
+    /// The home-screen widget reads the latest change from the shared App
+    /// Group (FindWidgetProvider in FindWidget.swift).
+    private func shareWithWidget() {
+        guard let shared = UserDefaults(suiteName: "group.tech.taliferro.find") else { return }
+        let latest = watches.compactMap { watch in watch.lastChange.map { (watch, $0) } }.max { $0.1.at < $1.1.at }
+        let values: [String: Any] = [
+            "widget.changedCount": changedCount,
+            "widget.latestTitle": latest?.0.title ?? "",
+            "widget.latestSummary": latest?.1.summary ?? "",
+            "widget.latestAt": (latest?.1.at ?? 0) / 1000,
+        ]
+        let unchanged = values.allSatisfy { key, value in (shared.object(forKey: key) as? NSObject)?.isEqual(value) == true }
+        guard !unchanged else { return }
+        values.forEach { shared.set($1, forKey: $0) }
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     // MARK: Display

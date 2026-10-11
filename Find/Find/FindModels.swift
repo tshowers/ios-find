@@ -385,6 +385,20 @@ struct FindWatchResponse: Decodable {
     let message: String?
 }
 
+struct FindShareRequest: Encodable {
+    let query: String
+    let title: String
+    let summary: String
+    let url: String
+    let displayUrl: String
+    let imageUrl: String
+}
+
+struct FindShareResponse: Decodable {
+    let success: Bool
+    let url: String?
+}
+
 struct FindFollowupRequest: Encodable {
     let query: String
     let followup: String

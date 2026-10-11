@@ -14,6 +14,7 @@ struct SearchView: View {
     @State private var activePill = ""
     @State private var conversionAmountText = ""
     @State private var locationSettingBlocked = false
+    @State private var preparedShareURL: URL?
     @State private var conversionInputUnit = ""
     @State private var conversionOutputUnit = ""
     @State private var conversionRate: Double?
@@ -142,7 +143,7 @@ struct SearchView: View {
                 Text(viewModel.errorMessage)
             }
             .sheet(isPresented: $showingShareSheet) {
-                if let url = currentShareURL {
+                if let url = preparedShareURL ?? currentShareURL {
                     ShareSheet(items: [url])
                 }
             }
@@ -159,6 +160,8 @@ struct SearchView: View {
             openPendingWatchQuery()
         }
         .onAppear { openPendingWatchQuery() }
+        .onOpenURL { url in handleFindURL(url) }
+        .onChange(of: viewModel.searchResponse?.query) { _, _ in preparedShareURL = nil }
         .onDisappear {
             tiltNav.disable()
         }
@@ -1305,7 +1308,7 @@ struct SearchView: View {
     private func shareView(screenWidth: CGFloat) -> some View {
         VStack(spacing: 16) {
             Spacer()
-            if let url = currentShareURL {
+            if let url = preparedShareURL ?? currentShareURL {
                 Text("Share this result")
                     .font(Theme.font(22, weight: .bold))
                 Text(url.absoluteString)
@@ -1314,7 +1317,7 @@ struct SearchView: View {
                     .multilineTextAlignment(.center)
                     .frame(width: min(screenWidth - 48, 320))
                 Button("Open Share Sheet") {
-                    showingShareSheet = true
+                    if preparedShareURL == nil { prepareShare() } else { showingShareSheet = true }
                 }
                 .buttonStyle(.plain)
                 .font(Theme.font(17, weight: .bold))
@@ -1468,9 +1471,9 @@ struct SearchView: View {
                         viewModel.resetSearch()
                         showingSearchScreen = true
                         selectedTab = .home
-                    } else if tab == .share, currentShareURL != nil {
+                    } else if tab == .share, viewModel.searchResponse != nil {
                         selectedTab = .share
-                        showingShareSheet = true
+                        prepareShare()
                     } else {
                         selectedTab = tab
                     }
@@ -1836,6 +1839,52 @@ struct SearchView: View {
 
     private var baseQuery: String {
         (viewModel.searchResponse?.query ?? viewModel.query).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Makes the short find.taliferro.tech/s/<id> link (it previews the result
+    /// in Messages and opens it in Find), then shows the share sheet.
+    private func prepareShare() {
+        let response = viewModel.searchResponse
+        let result = currentResult
+        let title: String
+        let summary: String
+        if let instant = response?.instant, response?.queryType == .instant {
+            title = "\(instant.title): \(instant.value)"
+            summary = instant.detail ?? ""
+        } else {
+            title = result?.title ?? response?.query ?? viewModel.query
+            summary = response?.answer?.text ?? result?.summary ?? ""
+        }
+        Task {
+            preparedShareURL = await viewModel.shareLink(title: title, summary: summary, result: result)
+            showingShareSheet = preparedShareURL != nil
+        }
+    }
+
+    /// find://search?q=… opens a search, find://search alone the search
+    /// screen, find://watching the Watching list (the home-screen widget).
+    private func handleFindURL(_ url: URL) {
+        guard url.scheme == "find" else { return }
+        switch url.host {
+        case "watching":
+            selectedTab = .history
+        case "search":
+            let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first(where: { $0.name == "q" })?.value ?? ""
+            if query.isEmpty {
+                viewModel.resetSearch()
+                showingSearchScreen = true
+                selectedTab = .home
+            } else {
+                selectedTab = .home
+                Task {
+                    await viewModel.runHistorySearch(query)
+                    if viewModel.searchResponse != nil { showingSearchScreen = false }
+                }
+            }
+        default:
+            break
+        }
     }
 
     private var currentShareURL: URL? {

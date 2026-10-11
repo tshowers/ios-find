@@ -63,6 +63,11 @@ final class FindAPIClient {
         try await post(path: path, payload: payload, responseType: FindWatchResponse.self)
     }
 
+    /// A short find.taliferro.tech/s/<id> link that previews a result.
+    func share(_ payload: FindShareRequest) async throws -> FindShareResponse {
+        try await post(path: "find/share", payload: payload, responseType: FindShareResponse.self)
+    }
+
     func followup(_ payload: FindFollowupRequest) async throws -> FindFollowupResponse {
         try await post(path: "find/followup", payload: payload, responseType: FindFollowupResponse.self)
     }

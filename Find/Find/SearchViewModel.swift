@@ -65,6 +65,23 @@ final class SearchViewModel: ObservableObject {
         return granted
     }
 
+    /// A short share link for the current result; falls back to a plain
+    /// find.taliferro.tech/?query= link if the backend can't make one.
+    func shareLink(title: String, summary: String, result: FindRankedResult?) async -> URL? {
+        let current = (searchResponse?.query ?? query).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !current.isEmpty else { return nil }
+        var fallback = URLComponents(string: "https://find.taliferro.tech/")!
+        fallback.queryItems = [URLQueryItem(name: "query", value: current)]
+        let request = FindShareRequest(
+            query: current, title: title, summary: String(summary.prefix(300)),
+            url: result?.url ?? "", displayUrl: result?.displayUrl ?? "", imageUrl: result?.imageUrl ?? ""
+        )
+        if let link = try? await apiClient.share(request).url, let url = URL(string: link) {
+            return url
+        }
+        return fallback.url
+    }
+
     /// "Ask about this result". Never throws: a failure comes back as an
     /// unanswered response that still offers the search.
     func askFollowup(_ request: FindFollowupRequest) async -> FindFollowupResponse {
