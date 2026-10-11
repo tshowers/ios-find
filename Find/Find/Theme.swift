@@ -1,61 +1,79 @@
 import SwiftUI
 import UIKit
 
-// Mirrors the web app's CSS custom properties (--todd-panel-bg,
-// --todd-panel-text, --todd-surface-2, etc. in src/styles.css), which swap
-// between light/dark token sets based on prefers-color-scheme. Each Color
-// here adapts live to the system appearance the same way.
+// Find's design tokens - logo colours on white / near-black, following the
+// system appearance. Mirrors the web app's find-home.component.css tokens
+// (see web-products/find docs/design_handoff_find_results/README.md).
+// The older names (background, surface, subtext, accent, ...) are kept and
+// pointed at the new palette so every screen picks it up.
 enum Theme {
-    static let background = adaptive(
-        light: .white,
-        dark: UIColor(red: 0.051, green: 0.067, blue: 0.090, alpha: 1)   // #0d1117
-    )
+    // MARK: Core tokens
 
-    static let cardBackground = adaptive(
-        light: .white,
-        dark: UIColor(red: 0.075, green: 0.110, blue: 0.153, alpha: 1)   // #131c27
-    )
+    static let bg = adaptive(light: 0xffffff, dark: 0x0c0e13)
+    static let surface = adaptive(light: 0xf2f3f6, dark: 0x171a22)
+    static let surface2 = adaptive(light: 0xe4e7ed, dark: 0x242936)
+    static let text = adaptive(light: 0x0f1115, dark: 0xf2f4f8)
+    static let muted = adaptive(light: 0x5a6170, dark: 0x9aa2b2)
+    static let blue = adaptive(light: 0x2f6bff, dark: 0x3d7bff)
+    static let blueInk = adaptive(light: 0x1f55e0, dark: 0x86aeff)
 
-    static let surface = adaptive(
-        light: UIColor(red: 0.973, green: 0.973, blue: 0.973, alpha: 1), // #f8f8f8
-        dark: UIColor(red: 0.102, green: 0.145, blue: 0.208, alpha: 1)   // #1a2535
-    )
+    // Logo colours: progress segments, weather icons, range bars.
+    static let cyan = Color(hex: 0x1fc8ec)
+    static let yellow = Color(hex: 0xffd92e)
+    static let pink = Color(hex: 0xff4fa8)
+    static let violet = Color(hex: 0xa259ff)
+    static let logoColors: [Color] = [blue, cyan, yellow, pink, violet]
 
-    static let text = adaptive(
-        light: UIColor(red: 0.133, green: 0.133, blue: 0.133, alpha: 1), // #222
-        dark: UIColor(red: 0.941, green: 0.965, blue: 1.0, alpha: 1)     // #f0f6ff
-    )
+    // Tinted pairs (background / foreground).
+    static let tBlue = adaptive(light: 0xe3ecff, dark: 0x15254a)
+    static let tBlueFg = adaptive(light: 0x1d4fd6, dark: 0xa3c1ff)
+    static let tCyan = adaptive(light: 0xdaf6fc, dark: 0x0c2d35)
+    static let tCyanFg = adaptive(light: 0x08657d, dark: 0x74e4f8)
+    static let tPink = adaptive(light: 0xffe3f1, dark: 0x3a1029)
+    static let tPinkFg = adaptive(light: 0xa8105a, dark: 0xff92c9)
+    static let tViolet = adaptive(light: 0xefe5ff, dark: 0x2a1847)
+    static let tVioletFg = adaptive(light: 0x6427c9, dark: 0xcdaaff)
+    static let tYellow = adaptive(light: 0xfff4c2, dark: 0x2f2906)
+    static let tYellowFg = adaptive(light: 0x6e5700, dark: 0xffe56a)
+    static let tGreen = adaptive(light: 0xe0f6e6, dark: 0x0e2c19)
+    static let tGreenFg = adaptive(light: 0x17703a, dark: 0x80e2a4)
 
-    static let subtext = adaptive(
-        light: UIColor(red: 0.333, green: 0.333, blue: 0.333, alpha: 1), // #555
-        dark: UIColor(red: 0.545, green: 0.643, blue: 0.741, alpha: 1)   // #8ba4bd
-    )
+    // MARK: Older names, pointed at the new palette
 
-    static let border = adaptive(
-        light: UIColor.black.withAlphaComponent(0.08),
-        dark: UIColor(red: 0, green: 0.749, blue: 1.0, alpha: 0.12)      // rgba(0,191,255,.12)
-    )
+    static let background = bg
+    static let cardBackground = bg
+    static let subtext = muted
+    static let border = surface2
+    static let placeholder = muted
+    static let accent = blue
+    static let hairline = surface2
+    /// Behind the grid header, context strip, and tab bar.
+    static let chrome = bg
 
-    static let placeholder = adaptive(
-        light: UIColor(red: 0.467, green: 0.467, blue: 0.467, alpha: 1), // #777
-        dark: UIColor(red: 0.369, green: 0.478, blue: 0.580, alpha: 1)   // #5e7a94
-    )
+    // Query terms in the Grid stay red, as in the original release.
+    static let highlightRed = adaptive(light: 0xd0021b, dark: 0xff5a5f)
 
-    // Same value both modes, matching --tl-blue in the web app's styles.css.
-    static let accent = Color(red: 0.0, green: 0.749, blue: 1.0)         // #00bfff
+    // MARK: Type
 
-    // Quick-action tile colors, matching the web app's find-home.component.css
-    // .find-quick-action--* rules exactly (same in both light and dark mode there).
-    static let quickActionNews = Color(red: 0.937, green: 0.267, blue: 0.267)        // #ef4444
-    static let quickActionWeather = Color(red: 0.086, green: 0.514, blue: 0.910)     // #1683e8
-    static let quickActionSports = Color(red: 0.086, green: 0.655, blue: 0.396)      // #16a765
-    static let quickActionConversion = Color(red: 0.486, green: 0.227, blue: 0.929)  // #7c3aed
-    static let quickActionRestaurants = Color(red: 0.898, green: 0.608, blue: 0.031) // #e59b08
-    static let quickActionEvents = Color(red: 0.031, green: 0.569, blue: 0.698)      // #0891b2
+    /// Helvetica Neue everywhere, at a fixed size (the app pins Dynamic Type).
+    static func font(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        .custom("Helvetica Neue", fixedSize: size).weight(weight)
+    }
 
-    private static func adaptive(light: UIColor, dark: UIColor) -> Color {
+    private static func adaptive(light: UInt32, dark: UInt32) -> Color {
         Color(UIColor { traits in
-            traits.userInterfaceStyle == .dark ? dark : light
+            UIColor(hex: traits.userInterfaceStyle == .dark ? dark : light)
         })
+    }
+}
+
+extension UIColor {
+    convenience init(hex: UInt32) {
+        self.init(
+            red: CGFloat((hex >> 16) & 0xff) / 255,
+            green: CGFloat((hex >> 8) & 0xff) / 255,
+            blue: CGFloat(hex & 0xff) / 255,
+            alpha: 1
+        )
     }
 }

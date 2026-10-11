@@ -1,17 +1,19 @@
 import SwiftUI
 import UIKit
 
-/// The real iBooks-style page curl - `UIPageViewController(transitionStyle:
-/// .pageCurl)` - ported from Network iOS's `PageCurlView`. Wrapping just
-/// enough UIKit gets swipe-forward AND swipe-back for free via
-/// `UIPageViewController`'s data source (before/after controllers), and the
-/// existing shelf chevrons keep working too: a button-driven index change is
-/// detected in `updateUIViewController` and animated with the same curl via
-/// `setViewControllers(direction:animated:)`.
-struct FindResultPageCurlView: UIViewControllerRepresentable {
+/// Standard iOS horizontal paging between results -
+/// `UIPageViewController(transitionStyle: .scroll)`, the same swipe as Photos
+/// or the App Store. (It used to be an iBooks-style page curl, which suited
+/// the original paper look but not the flat redesign.) The data source
+/// (before/after controllers) gives swipe-forward AND swipe-back, and the
+/// pager's Back/Next buttons keep working too: a button-driven index change
+/// is detected in `updateUIViewController` and animated with the same slide
+/// via `setViewControllers(direction:animated:)`.
+struct FindResultPagerView: UIViewControllerRepresentable {
     let response: FindSearchResponse
     @Binding var currentIndex: Int
     let screenWidth: CGFloat
+    let feedbackStore: FindFeedbackStore
     /// When true, page index -1 is a valid page (the backend's own generated
     /// answer, ahead of every ranked result) - see ResultPageView's
     /// `isGroundedAnswerSlide`.
@@ -19,8 +21,10 @@ struct FindResultPageCurlView: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> UIPageViewController {
         let pageVC = UIPageViewController(
-            transitionStyle: .pageCurl,
-            navigationOrientation: .horizontal
+            transitionStyle: .scroll,
+            navigationOrientation: .horizontal,
+            // A small gap so neighbouring result cards don't touch mid-swipe.
+            options: [.interPageSpacing: 16]
         )
         pageVC.dataSource = context.coordinator
         pageVC.delegate = context.coordinator
@@ -48,9 +52,9 @@ struct FindResultPageCurlView: UIViewControllerRepresentable {
     }
 
     final class Coordinator: NSObject, UIPageViewControllerDataSource, UIPageViewControllerDelegate {
-        var parent: FindResultPageCurlView
+        var parent: FindResultPagerView
 
-        init(_ parent: FindResultPageCurlView) {
+        init(_ parent: FindResultPagerView) {
             self.parent = parent
         }
 
@@ -63,7 +67,18 @@ struct FindResultPageCurlView: UIViewControllerRepresentable {
             let isValidLeadingAnswer = index == -1 && parent.hasLeadingAnswer
             guard isValidLeadingAnswer || parent.response.results.indices.contains(index) else { return nil }
             let host = UIHostingController(
-                rootView: ResultPageView(response: parent.response, pageIndex: index, screenWidth: parent.screenWidth)
+                rootView: ResultPageView(
+                    response: parent.response,
+                    pageIndex: index,
+                    screenWidth: parent.screenWidth,
+                    feedbackStore: parent.feedbackStore,
+                    // The headline "Next" preview: moving the binding makes
+                    // updateUIViewController slide to that page.
+                    onNext: { [weak self] in
+                        guard let self, self.parent.response.results.indices.contains(index + 1) else { return }
+                        self.parent.currentIndex = index + 1
+                    }
+                )
             )
             host.view.backgroundColor = .clear
             host.view.tag = index

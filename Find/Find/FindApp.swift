@@ -12,12 +12,13 @@ struct FindApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     private let apiClient = FindAPIClient(config: .fromBundle())
     private let awardsService = FindAwardsService()
+    private let locationService = FindLocationService()
 
     var body: some Scene {
         WindowGroup {
             NavigationStack {
                 SearchView(
-                    viewModel: SearchViewModel(apiClient: apiClient, awardsService: awardsService),
+                    viewModel: SearchViewModel(apiClient: apiClient, awardsService: awardsService, locationService: locationService),
                     awardsService: awardsService
                 )
             }

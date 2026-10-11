@@ -25,7 +25,7 @@ struct SearchView: View {
 
     private enum BottomTab: String, CaseIterable {
         case home = "HOME"
-        case grid = "GRID"
+        case grid = "ALL"
         case history = "HISTORY"
         case info = "INFO"
         case awards = "AWARDS"
@@ -35,8 +35,8 @@ struct SearchView: View {
             switch self {
             case .home: return "house.fill"
             case .grid: return "square.grid.2x2"
-            case .history: return "arrow.counterclockwise"
-            case .info: return "info.circle.fill"
+            case .history: return "clock"
+            case .info: return "info.circle"
             case .awards: return "rosette"
             case .share: return "square.and.arrow.up"
             }
@@ -52,22 +52,22 @@ struct SearchView: View {
     private struct FindQuickAction: Identifiable {
         let label: String
         let systemImage: String
-        let color: Color
+        let background: Color
+        let foreground: Color
         let query: String
         var disabled = false
         var id: String { label }
     }
 
-    // Mirrors the web app's find-home.component.ts `quickActions` array
-    // exactly - same labels, order, colors (via Theme.quickAction*), and
-    // queries.
+    // Mirrors the web app's find-home.component.ts `quickActions` array -
+    // same labels, order, and queries, tinted with the logo colour pairs.
     private static let quickActions: [FindQuickAction] = [
-        FindQuickAction(label: "News", systemImage: "newspaper.fill", color: Theme.quickActionNews, query: "Today's News"),
-        FindQuickAction(label: "Weather", systemImage: "sun.max.fill", color: Theme.quickActionWeather, query: "weather"),
-        FindQuickAction(label: "Sports", systemImage: "soccerball", color: Theme.quickActionSports, query: "sports news"),
-        FindQuickAction(label: "Conversion", systemImage: "arrow.left.arrow.right", color: Theme.quickActionConversion, query: "100 USD to EUR"),
-        FindQuickAction(label: "Restaurants", systemImage: "fork.knife", color: Theme.quickActionRestaurants, query: "restaurants near me"),
-        FindQuickAction(label: "Events", systemImage: "calendar", color: Theme.quickActionEvents, query: "events near me", disabled: true),
+        FindQuickAction(label: "News", systemImage: "newspaper", background: Theme.tPink, foreground: Theme.tPinkFg, query: "Today's News"),
+        FindQuickAction(label: "Weather", systemImage: "sun.max", background: Theme.tBlue, foreground: Theme.tBlueFg, query: "weather"),
+        FindQuickAction(label: "Sports", systemImage: "trophy", background: Theme.tCyan, foreground: Theme.tCyanFg, query: "sports news"),
+        FindQuickAction(label: "Conversion", systemImage: "arrow.left.arrow.right", background: Theme.tViolet, foreground: Theme.tVioletFg, query: "100 USD to EUR"),
+        FindQuickAction(label: "Restaurants", systemImage: "fork.knife", background: Theme.tYellow, foreground: Theme.tYellowFg, query: "restaurants near me"),
+        FindQuickAction(label: "Events", systemImage: "calendar", background: Theme.surface, foreground: Theme.muted, query: "events near me", disabled: true),
     ]
 
     init(viewModel: SearchViewModel, awardsService: FindAwardsService) {
@@ -113,7 +113,11 @@ struct SearchView: View {
                     .zIndex(100)
                 }
             }
-            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
+            // Runs down through the bottom safe area to the screen edge: the
+            // bottom bar already pads itself clear of the home indicator
+            // (bottomInset), so stopping at the safe area as well left that
+            // inset reserved twice - a band of empty chrome under the icons.
+            .frame(width: geometry.size.width, height: geometry.size.height + geometry.safeAreaInsets.bottom, alignment: .top)
             .padding(.bottom, footerReservedHeight(bottomInset: geometry.safeAreaInsets.bottom))
             .background(Theme.background)
             .overlay(alignment: .top) {
@@ -184,48 +188,51 @@ struct SearchView: View {
         .background(Theme.cardBackground)
     }
 
+    // Home (3i): logo + wordmark, a 54pt search field with a full-width Find
+    // button under it, and a 3x2 grid of tinted quick-search tiles.
     private func searchHomeView(screenWidth: CGFloat) -> some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 0) {
-                Spacer(minLength: 62)
-
-                findLogo
-                    .padding(.bottom, 26)
-
-                searchBar
-                    .padding(.horizontal, 24)
-
-                Button {
-                    runSearchFromHome(viewModel.query)
-                } label: {
-                    Group {
-                        if viewModel.isLoading {
-                            ProgressView()
-                                .tint(.black)
-                        } else {
-                            Text("Find")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundStyle(.black)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(Theme.accent)
-                    .clipShape(Capsule())
+            VStack(spacing: 24) {
+                HStack(spacing: 12) {
+                    findLogo
+                    Text("Find")
+                        .font(Theme.font(44, weight: .bold))
+                        .tracking(-1.76)
+                        .foregroundStyle(Theme.text)
                 }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 24)
-                .padding(.top, 18)
+                .padding(.top, 96)
+
+                VStack(spacing: 10) {
+                    searchBar
+
+                    Button {
+                        runSearchFromHome(viewModel.query)
+                    } label: {
+                        Group {
+                            if viewModel.isLoading {
+                                ProgressView().tint(.white)
+                            } else {
+                                Text("Find")
+                                    .font(Theme.font(17, weight: .bold))
+                                    .foregroundStyle(.white)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(Theme.blue, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
 
                 quickActionsGrid
-                    .padding(.horizontal, 24)
-                    .padding(.top, 10)
 
                 Spacer(minLength: 60)
             }
+            .padding(.horizontal, 20)
+            .frame(maxWidth: 560)
             .frame(width: screenWidth)
-            .background(Theme.cardBackground)
         }
+        .background(Theme.bg)
     }
 
     private var quickActionsGrid: some View {
@@ -234,24 +241,26 @@ struct SearchView: View {
                 Button {
                     runSearchFromHome(action.query)
                 } label: {
-                    VStack(spacing: 5) {
+                    VStack(spacing: 6) {
                         Image(systemName: action.systemImage)
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(.system(size: 24, weight: .medium))
                         Text(action.label)
-                            .font(.system(size: 13, weight: .bold))
+                            .font(Theme.font(14, weight: .bold))
                         if action.disabled {
                             Text("Coming soon")
-                                .font(.system(size: 9, weight: .semibold))
+                                .font(Theme.font(10, weight: .semibold))
+                                .padding(.top, -4)
                         }
                     }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity, minHeight: 84)
-                    .background(action.color)
-                    .opacity(action.disabled ? 0.52 : 1)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .foregroundStyle(action.foreground)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 84)
+                    .background(action.background, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .opacity(action.disabled ? 0.6 : 1)
                 }
                 .buttonStyle(.plain)
                 .disabled(action.disabled || viewModel.isLoading)
+                .accessibilityLabel(action.disabled ? "\(action.label) coming soon" : "Search \(action.label)")
             }
         }
     }
@@ -287,25 +296,28 @@ struct SearchView: View {
                 Spacer()
             }
         }
-        .background(Theme.cardBackground)
+        .background(Theme.bg)
     }
 
     private func weatherHomeView(screenWidth: CGFloat) -> some View {
         VStack(spacing: 0) {
-            resultShelf(screenWidth: screenWidth)
+            resultPager(screenWidth: screenWidth)
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    if let heroURL = heroImageURL {
-                        heroImageView(url: heroURL, screenWidth: screenWidth)
-                    }
+                VStack(alignment: .leading, spacing: 12) {
                     if let weather = viewModel.searchResponse?.weather {
                         weatherCard(weather)
+                        if let forecast = weather.forecast, !forecast.isEmpty {
+                            forecastList(forecast)
+                        }
+                        feedbackRow(meta: weatherMeta(weather))
+                            .padding(.top, 12)
                     }
-                    Spacer(minLength: 18)
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 6)
+                .frame(maxWidth: 720)
                 .frame(width: screenWidth)
-                .padding(.top, 24)
                 .padding(.bottom, 150)
             }
         }
@@ -313,16 +325,22 @@ struct SearchView: View {
 
     private func conversionHomeView(screenWidth: CGFloat) -> some View {
         VStack(spacing: 0) {
-            resultShelf(screenWidth: screenWidth)
+            resultPager(screenWidth: screenWidth)
 
             ScrollView(showsIndicators: false) {
                 if let conversion = viewModel.searchResponse?.conversion {
-                    if let heroURL = heroImageURL {
-                        heroImageView(url: heroURL, screenWidth: screenWidth)
+                    VStack(alignment: .leading, spacing: 8) {
+                        conversionCards
+                        conversionRateLine(conversion)
+                        conversionKeypad
+                        feedbackRow(meta: conversionSource.isEmpty ? nil : "Source: \(conversionSource)")
+                            .padding(.top, 16)
                     }
-                    conversionCard(conversion)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 6)
+                    .frame(maxWidth: 560)
+                    .frame(width: screenWidth)
                 }
-                Spacer(minLength: 18)
             }
             .padding(.bottom, 150)
         }
@@ -330,94 +348,85 @@ struct SearchView: View {
         .onChange(of: viewModel.searchResponse?.query) { _, _ in syncConversionState() }
     }
 
-    private func conversionCard(_ conversion: FindConversionResult) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(conversion.category == .currency ? "CURRENCY CONVERSION" : "UNIT CONVERSION")
-                .font(.system(size: 12, weight: .heavy))
-                .tracking(1)
-                .foregroundStyle(Theme.accent)
-
-            HStack(alignment: .bottom, spacing: 10) {
-                conversionField(title: "From", isOutput: false)
-
-                Button {
-                    swapConversion()
-                } label: {
-                    Image(systemName: "arrow.left.arrow.right")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(Theme.accent)
-                        .frame(width: 36, height: 36)
-                        .background(Theme.accent.opacity(0.12))
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(Theme.border, lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Swap conversion units")
-
-                conversionField(title: "To", isOutput: true)
-            }
-
-            conversionKeypad
-
-            if conversion.category == .currency, let rate = conversionRate {
-                Text("1 \(conversionInputUnit) = \(formattedConversionValue(rate, maximumFractionDigits: 6)) \(conversionOutputUnit)\(conversionRateUpdatedAt.isEmpty ? "" : " · Updated \(formattedConversionDate(conversionRateUpdatedAt))")")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Theme.subtext)
-            } else if conversion.category == .currency {
-                Text("A live exchange rate is not available right now.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.orange)
-            }
-
-            if !conversionSource.isEmpty {
-                Text("Source: \(conversionSource)")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.subtext)
-            }
+    // Conversion (3k): From and To stacked, with the swap button over the seam.
+    private var conversionCards: some View {
+        VStack(spacing: 8) {
+            conversionField(title: "From", isOutput: false)
+            conversionField(title: "To", isOutput: true)
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.cardBackground)
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Theme.border, lineWidth: 1))
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .padding(.horizontal, 18)
-        .padding(.top, 24)
+        .overlay(alignment: .trailing) {
+            Button {
+                swapConversion()
+            } label: {
+                Image(systemName: "arrow.up.arrow.down")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(Theme.blue, in: Circle())
+                    .padding(4)
+                    .background(Theme.bg, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 116)
+            .accessibilityLabel("Swap conversion units")
+        }
     }
 
+    @ViewBuilder
+    private func conversionRateLine(_ conversion: FindConversionResult) -> some View {
+        if conversion.category == .currency, let rate = conversionRate {
+            let updated = FindFormat.shortDateTime(conversionRateUpdatedAt).map { " · Updated \($0)" } ?? ""
+            Text("1 \(conversionInputUnit) = \(formattedConversionValue(rate, maximumFractionDigits: 6)) \(conversionOutputUnit)\(updated)")
+                .font(Theme.font(13))
+                .foregroundStyle(Theme.muted)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 4)
+        } else if conversion.category == .currency {
+            Text("A live exchange rate is not available right now.")
+                .font(Theme.font(13))
+                .foregroundStyle(Theme.muted)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 4)
+        }
+    }
+
+    // 3x4 keypad: 1-9, ".", "0", and backspace (long-press clears).
     private var conversionKeypad: some View {
-        let digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
-        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
-            ForEach(digits, id: \.self) { digit in
-                Button(digit) { appendConversionDigit(digit) }
-                    .frame(maxWidth: .infinity, minHeight: 38)
-                    .background(Theme.surface)
-                    .foregroundStyle(Theme.text)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.border, lineWidth: 1))
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+            ForEach(["1", "2", "3", "4", "5", "6", "7", "8", "9"], id: \.self) { digit in
+                keypadKey { appendConversionDigit(digit) } label: { Text(digit) }
             }
-            Button(".") { appendConversionDecimal() }
-                .frame(maxWidth: .infinity, minHeight: 38)
-                .background(Theme.surface)
+            keypadKey { appendConversionDecimal() } label: { Text(".") }
+            keypadKey { appendConversionDigit("0") } label: { Text("0") }
+            Image(systemName: "delete.left")
+                .font(Theme.font(20, weight: .semibold))
                 .foregroundStyle(Theme.text)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.border, lineWidth: 1))
-            Button { deleteConversionDigit() } label: { Image(systemName: "delete.left") }
-                .frame(maxWidth: .infinity, minHeight: 38)
-                .background(Theme.surface)
-                .foregroundStyle(Theme.text)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.border, lineWidth: 1))
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .onTapGesture { deleteConversionDigit() }
+                .onLongPressGesture(minimumDuration: 0.5) { conversionAmountText = "0" }
+                .accessibilityElement()
                 .accessibilityLabel("Backspace")
-            Button("Clear") { conversionAmountText = "0" }
-                .frame(maxWidth: .infinity, minHeight: 38)
-                .background(Theme.accent.opacity(0.12))
-                .foregroundStyle(Theme.accent)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.border, lineWidth: 1))
-                .gridCellColumns(2)
+                .accessibilityHint("Hold to clear")
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { deleteConversionDigit() }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Calculator keypad")
+    }
+
+    private func keypadKey<Label: View>(_ action: @escaping () -> Void, @ViewBuilder label: () -> Label) -> some View {
+        Button(action: action) {
+            label()
+                .font(Theme.font(22, weight: .semibold))
+                .foregroundStyle(Theme.text)
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     private func appendConversionDigit(_ digit: String) {
@@ -437,32 +446,29 @@ struct SearchView: View {
         if conversionAmountText.isEmpty || conversionAmountText == "-" { conversionAmountText = "0" }
     }
 
-    @ViewBuilder
     private func conversionField(title: String, isOutput: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title.uppercased())
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(Theme.subtext)
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(Theme.font(12, weight: .semibold))
+                    .foregroundStyle(isOutput ? Theme.tVioletFg : Theme.muted)
 
-            if isOutput {
-                Text(formattedConversionOutput)
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(Theme.text)
-                    .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
-                    .padding(.horizontal, 12)
-                    .background(Theme.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            } else {
-                TextField("Amount", text: $conversionAmountText)
-                    .keyboardType(.decimalPad)
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(Theme.text)
-                    .frame(minHeight: 48)
-                    .padding(.horizontal, 12)
-                    .background(Theme.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .onChange(of: conversionAmountText) { _, _ in }
+                if isOutput {
+                    Text(formattedConversionOutput)
+                        .font(Theme.font(36, weight: .bold))
+                        .tracking(-1)
+                        .foregroundStyle(Theme.tVioletFg)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                } else {
+                    TextField("0", text: $conversionAmountText)
+                        .keyboardType(.decimalPad)
+                        .font(Theme.font(36, weight: .bold))
+                        .tracking(-1)
+                        .foregroundStyle(Theme.text)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Menu {
                 ForEach(conversionUnitOptions) { option in
@@ -472,182 +478,177 @@ struct SearchView: View {
                     }
                 }
             } label: {
-                HStack(spacing: 4) {
-                    Text(isOutput ? conversionOutputUnit : conversionInputUnit)
+                HStack(spacing: 6) {
+                    Text(conversionUnitShort(isOutput ? conversionOutputUnit : conversionInputUnit))
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(Theme.font(10, weight: .bold))
                 }
-                .font(.system(size: 12, weight: .semibold))
+                .font(Theme.font(15, weight: .bold))
                 .foregroundStyle(Theme.text)
                 .lineLimit(1)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Theme.surface)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .padding(.horizontal, 14)
+                .frame(height: 38)
+                .background(Theme.bg, in: Capsule())
             }
+            .accessibilityLabel(isOutput ? "Destination unit" : "Source unit")
         }
-        .frame(maxWidth: .infinity)
-    }
-
-    private func weatherCard(_ weather: FindWeatherInfo) -> some View {
-        VStack(spacing: 10) {
-            AsyncImage(url: URL(string: weather.iconUrl)) { phase in
-                if let image = phase.image {
-                    image
-                        .resizable()
-                        .scaledToFit()
-                } else {
-                    Color.clear
-                }
-            }
-            .frame(width: 90, height: 90)
-
-            Text("\(Int(weather.tempF.rounded()))°F")
-                .font(.system(size: 48, weight: .bold))
-                .foregroundStyle(Theme.text)
-
-            Text(weather.postalCode.map { "\(weather.location) \($0)" } ?? weather.location)
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(Theme.text)
-
-            Text(weather.description.capitalized)
-                .font(.system(size: 16))
-                .foregroundStyle(Theme.subtext)
-
-            HStack(spacing: 20) {
-                Text("Feels like \(Int(weather.feelsLikeF.rounded()))°")
-                Text("Humidity \(Int(weather.humidity))%")
-                Text("Wind \(Int(weather.windMph)) mph")
-            }
-            .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(Theme.subtext)
-            .padding(.top, 8)
-
-            if weather.highF != nil || weather.lowF != nil {
-                HStack(spacing: 16) {
-                    if let highF = weather.highF {
-                        Text("High \(Int(highF.rounded()))°")
-                    }
-                    if let lowF = weather.lowF {
-                        Text("Low \(Int(lowF.rounded()))°")
-                    }
-                }
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(Theme.text)
-                .padding(.top, 6)
-            }
-
-            if let forecast = weather.forecast, !forecast.isEmpty {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("FORECAST")
-                        .font(.system(size: 12, weight: .heavy))
-                        .tracking(1)
-                        .foregroundStyle(Theme.text)
-                        .padding(.bottom, 8)
-
-                    ForEach(Array(forecast.enumerated()), id: \.offset) { index, day in
-                        forecastRow(day, showsDivider: index < forecast.count - 1)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 22)
-            }
-
-            if let updatedAt = weather.updatedAt, let formatted = Self.formatUpdatedAt(updatedAt) {
-                Text("Updated \(formatted)")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.subtext)
-                    .padding(.top, 14)
-            }
-        }
-        .padding(28)
-        .frame(maxWidth: .infinity)
-        .background(Theme.cardBackground)
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Theme.border, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .padding(.horizontal, 18)
-        .padding(.top, 18)
+        .padding(.vertical, 16)
+        .background(isOutput ? Theme.tViolet : Theme.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 
-    private func forecastRow(_ day: FindWeatherForecastDay, showsDivider: Bool) -> some View {
-        HStack(spacing: 10) {
-            Text(day.label.isEmpty ? day.date : day.label)
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(Theme.text)
-                .frame(width: 92, alignment: .leading)
+    /// Short unit shown in the unit pill: "USD", "°F", "km".
+    private func conversionUnitShort(_ unit: String) -> String {
+        if conversionCategory == .temperature { return "°\(unit)" }
+        return unit == "l" ? "L" : unit
+    }
 
-            HStack(spacing: 6) {
-                if let iconUrlString = day.iconUrl, let iconURL = URL(string: iconUrlString) {
-                    AsyncImage(url: iconURL) { phase in
-                        if let image = phase.image {
-                            image.resizable().scaledToFit()
-                        } else {
-                            Color.clear
-                        }
-                    }
-                    .frame(width: 24, height: 24)
+    // Weather (3j): compact blue card, high/low and stats beside the temperature.
+    private func weatherCard(_ weather: FindWeatherInfo) -> some View {
+        let symbol = findWeatherSymbol(weather.description.isEmpty ? weather.condition : weather.description)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(weather.postalCode.map { "\(weather.location) \($0)" } ?? weather.location)
+                        .font(Theme.font(18, weight: .bold))
+                    Text(weather.description.isEmpty ? weather.condition : weather.description)
+                        .font(Theme.font(15))
                 }
+                Spacer()
+                Image(systemName: symbol.name)
+                    .font(.system(size: 50))
+                    .frame(width: 64, height: 64)
+                    .accessibilityHidden(true)
+            }
 
-                Text(day.description?.isEmpty == false ? day.description! : day.condition)
-                    .font(.system(size: 13))
-                    .foregroundStyle(Theme.subtext)
+            HStack(alignment: .bottom) {
+                Text("\(Int(weather.tempF.rounded()))°")
+                    .font(Theme.font(96, weight: .bold))
+                    .tracking(-5.8)
                     .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            HStack(spacing: 8) {
-                if let highF = day.highF {
-                    Text("\(Int(highF.rounded()))°")
-                        .fontWeight(.bold)
-                        .foregroundStyle(Theme.text)
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    if let highLow = highLowText(weather.highF, weather.lowF) {
+                        Text(highLow)
+                    }
+                    Text("Feels \(Int(weather.feelsLikeF.rounded()))° · \(Int(weather.humidity))% · \(Int(weather.windMph)) mph")
                 }
-                if let lowF = day.lowF {
-                    Text("\(Int(lowF.rounded()))°")
-                        .foregroundStyle(Theme.subtext)
-                }
+                .font(Theme.font(14, weight: .semibold))
+                .padding(.bottom, 10)
             }
-            .font(.system(size: 14))
         }
-        .padding(.vertical, 10)
-        .overlay(alignment: .bottom) {
-            if showsDivider {
-                Rectangle()
-                    .fill(Theme.border)
-                    .frame(height: 1)
+        .foregroundStyle(Theme.tBlueFg)
+        .padding(22)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.tBlue, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+    }
+
+    private func highLowText(_ high: Double?, _ low: Double?) -> String? {
+        let parts = [high.map { "H \(Int($0.rounded()))°" }, low.map { "L \(Int($0.rounded()))°" }].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    private func forecastList(_ forecast: [FindWeatherForecastDay]) -> some View {
+        let temps = forecast.flatMap { [$0.lowF, $0.highF] }.compactMap { $0 }
+        let weekMin = temps.min() ?? 0
+        let range = (temps.max() ?? 0) - weekMin
+        return VStack(alignment: .leading, spacing: 4) {
+            Text("\(forecast.count)-day forecast")
+                .font(Theme.font(15, weight: .bold))
+                .foregroundStyle(Theme.text)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 8)
+            ForEach(Array(forecast.enumerated()), id: \.offset) { _, day in
+                forecastRow(day, weekMin: weekMin, range: range)
             }
         }
     }
 
-    private static let updatedAtFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeStyle = .short
-        return formatter
-    }()
+    // Day, icon, low, range bar, high - the description is dropped on phones.
+    private func forecastRow(_ day: FindWeatherForecastDay, weekMin: Double, range: Double) -> some View {
+        let condition = day.description?.isEmpty == false ? day.description! : day.condition
+        let symbol = findWeatherSymbol(condition)
+        return HStack(spacing: 10) {
+            Text(forecastDayLabel(day))
+                .font(Theme.font(15, weight: .bold))
+                .foregroundStyle(Theme.text)
+                .lineLimit(1)
+                .frame(width: 52, alignment: .leading)
+            Image(systemName: symbol.name)
+                .symbolRenderingMode(.monochrome)
+                .font(.system(size: 18))
+                .foregroundStyle(symbol.color)
+                .frame(width: 26)
+                .accessibilityLabel(condition)
+            Text(day.lowF.map { "\(Int($0.rounded()))°" } ?? "")
+                .font(Theme.font(15))
+                .foregroundStyle(Theme.muted)
+                .frame(width: 34, alignment: .trailing)
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Theme.surface2)
+                    if let low = day.lowF, let high = day.highF {
+                        let left = range > 0 ? (low - weekMin) / range : 0
+                        let width = range > 0 ? max(0.04, (high - low) / range) : 1
+                        Capsule().fill(Theme.cyan)
+                            .frame(width: proxy.size.width * width)
+                            .offset(x: proxy.size.width * left)
+                    }
+                }
+            }
+            .frame(height: 6)
+            Text(day.highF.map { "\(Int($0.rounded()))°" } ?? "")
+                .font(Theme.font(15, weight: .bold))
+                .foregroundStyle(Theme.text)
+                .frame(width: 34, alignment: .leading)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
 
-    private static func formatUpdatedAt(_ iso: String) -> String? {
-        guard let date = ISO8601DateFormatter().date(from: iso) else { return nil }
-        return updatedAtFormatter.string(from: date)
+    /// "Saturday" -> "Sat", so day names fit the narrow forecast column.
+    private func forecastDayLabel(_ day: FindWeatherForecastDay) -> String {
+        let label = day.label.isEmpty ? day.date : day.label
+        return label.replacingOccurrences(
+            of: #"\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*day\b"#,
+            with: "$1",
+            options: .regularExpression
+        )
+    }
+
+    private func weatherMeta(_ weather: FindWeatherInfo) -> String? {
+        var parts: [String] = []
+        if let updated = FindFormat.shortTime(weather.updatedAt) { parts.append("Updated \(updated)") }
+        if let lat = weather.latitude, let lon = weather.longitude {
+            parts.append(String(format: "%.4f, %.4f", lat, lon))
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    private func feedbackRow(meta: String?) -> some View {
+        FindFeedbackRow(
+            store: viewModel.feedbackStore,
+            query: viewModel.searchResponse?.query ?? viewModel.query,
+            queryType: viewModel.searchResponse?.queryType ?? .entity,
+            meta: meta
+        )
     }
 
     private func answerHomeView(screenWidth: CGFloat) -> some View {
         VStack(spacing: 0) {
-            resultShelf(screenWidth: screenWidth)
+            resultPager(screenWidth: screenWidth)
 
             Group {
                 if let response = viewModel.searchResponse {
                     if results.isEmpty {
                         // A pure Q&A answer with no ranked source still has
-                        // exactly one page to show - nothing to curl between,
+                        // exactly one page to show - nothing to swipe between,
                         // and the shelf chevrons are already disabled for
                         // this case (see resultShelf).
-                        ResultPageView(response: response, pageIndex: hasLeadingAnswer ? -1 : 0, screenWidth: screenWidth)
+                        ResultPageView(response: response, pageIndex: hasLeadingAnswer ? -1 : 0, screenWidth: screenWidth, feedbackStore: viewModel.feedbackStore)
                     } else {
-                        FindResultPageCurlView(response: response, currentIndex: pagingIndexBinding, screenWidth: screenWidth, hasLeadingAnswer: hasLeadingAnswer)
+                        FindResultPagerView(response: response, currentIndex: pagingIndexBinding, screenWidth: screenWidth, feedbackStore: viewModel.feedbackStore, hasLeadingAnswer: hasLeadingAnswer)
                     }
                 }
             }
@@ -659,7 +660,7 @@ struct SearchView: View {
                             ProgressView()
                                 .scaleEffect(1.15)
                             Text("Refining result…")
-                                .font(.system(size: 15, weight: .semibold))
+                                .font(Theme.font(15, weight: .semibold))
                                 .foregroundStyle(Theme.subtext)
                         }
                         .padding(.horizontal, 22)
@@ -677,10 +678,10 @@ struct SearchView: View {
     // selectedResult` (a value, not an index - see `selectedResultIndex`),
     // so this bridges it to the plain `Binding<Int>` UIPageViewController
     // wants: reads resolve the selected result's index, writes re-select
-    // the result at that index. A swipe lands here via the page-curl
+    // the result at that index. A swipe lands here via the pager's
     // coordinator's `didFinishAnimating`; a shelf-chevron tap already calls
-    // `viewModel.select(...)` directly, and `FindResultPageCurlView` notices
-    // the mismatch next render and animates the same curl to it.
+    // `viewModel.select(...)` directly, and `FindResultPagerView` notices
+    // the mismatch next render and animates the same slide to it.
     private var pagingIndexBinding: Binding<Int> {
         Binding(
             get: { viewModel.viewingGroundedAnswer ? -1 : selectedResultIndex },
@@ -695,238 +696,106 @@ struct SearchView: View {
         )
     }
 
-    private func resultShelf(screenWidth: CGFloat) -> some View {
-        HStack {
+    // Pager (2i/3l): 44pt Back/Next circles around the progress segments and
+    // "N of M · See all". Weather and conversion are a single result, so they
+    // get Back plus a centred label instead.
+    private func resultPager(screenWidth: CGFloat) -> some View {
+        HStack(spacing: 8) {
             Button {
-                viewModel.resetSearch()
-                showingSearchScreen = true
+                goToPreviousResult()
             } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(Theme.text)
-                    .frame(width: 44, height: 44)
+                FindPagerCircle(systemImage: "chevron.left")
             }
             .buttonStyle(.plain)
-            .contentShape(Rectangle())
+            .accessibilityLabel(selectedResultIndex == 0 && !canGoBackToAnswer ? "Back to search" : "Previous result")
 
-            VStack(spacing: 4) {
-                Text(shelfTitle)
-                    .font(.system(size: 16, weight: .bold))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: .infinity)
-                    .accessibilityLabel(baseQuery.isEmpty ? "Find" : baseQuery)
-                    .help(baseQuery.isEmpty ? "Find" : baseQuery)
-
-                HStack(spacing: 5) {
-                    ForEach(0..<results.count, id: \.self) { index in
-                        let isActive = index == selectedResultIndex && !viewModel.viewingGroundedAnswer
-                        Circle()
-                            .fill(isActive ? Theme.text : Theme.border)
-                            .frame(width: isActive ? 8 : 6, height: isActive ? 8 : 6)
+            Group {
+                if isSingleResultMode {
+                    Text(pagerCenterLabel)
+                        .font(Theme.font(15, weight: .semibold))
+                        .foregroundStyle(Theme.text)
+                } else {
+                    VStack(spacing: 6) {
+                        if results.count > 1 {
+                            FindProgressSegments(
+                                count: results.count,
+                                current: viewModel.viewingGroundedAnswer ? -1 : selectedResultIndex
+                            )
+                        }
+                        if !results.isEmpty {
+                        HStack(spacing: 0) {
+                            if viewModel.viewingGroundedAnswer {
+                                Text("Results").foregroundStyle(Theme.muted)
+                            } else {
+                                Text("\(selectedResultIndex + 1)").bold().foregroundStyle(Theme.text)
+                                Text(" of \(results.count)").foregroundStyle(Theme.muted)
+                            }
+                            if results.count > 1 {
+                                Text(" · ").foregroundStyle(Theme.muted)
+                                Button("See all") { selectedTab = .grid }
+                                    .buttonStyle(.plain)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(Theme.blueInk)
+                            }
+                        }
+                        .font(Theme.font(12))
+                        }
                     }
                 }
             }
             .frame(maxWidth: .infinity)
 
-            Button {
-                goToNextResult()
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(canGoToNextResult ? Theme.text : Theme.subtext)
-                    .frame(width: 44, height: 44)
+            if isSingleResultMode {
+                Color.clear.frame(width: 44, height: 44)
+            } else {
+                Button {
+                    goToNextResult()
+                } label: {
+                    FindPagerCircle(systemImage: "chevron.right")
+                        .opacity(canGoToNextResult ? 1 : 0.4)
+                }
+                .buttonStyle(.plain)
+                .disabled(!canGoToNextResult)
+                .accessibilityLabel("Next result")
             }
-            .buttonStyle(.plain)
-            .contentShape(Rectangle())
-            .disabled(!canGoToNextResult)
         }
-        .frame(width: screenWidth)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(Theme.surface)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Theme.border)
-                .frame(height: 1)
-        }
+        .frame(width: screenWidth)
+        .background(Theme.bg)
     }
 
+    // Weather, conversion and movie answers are one result: Back plus a label.
+    private var isSingleResultMode: Bool {
+        isWeatherMode || isConversionMode || isMovieMode
+    }
+
+    private var isMovieMode: Bool {
+        viewModel.searchResponse?.movie != nil
+    }
+
+    private var pagerCenterLabel: String {
+        if isWeatherMode { return "Weather" }
+        if isMovieMode { return "Movie" }
+        return conversionCategory == .currency ? "Currency conversion" : "Unit conversion"
+    }
+
+    // All results: see ResultGridView (design_handoff_find_grid_about_help).
     private func gridView(screenWidth: CGFloat) -> some View {
-        VStack(spacing: 0) {
-            gridHeader(screenWidth: screenWidth)
-
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 16) {
-                    if results.isEmpty {
-                        emptyState("Run a search first.")
-                    } else {
-                        let isCompact = screenWidth < 520
-                        let columnWidth = max(0, isCompact ? screenWidth - 36 : (screenWidth - 36 - 12) / 2)
-
-                        // Two natural-height columns keep this view masonry-like
-                        // instead of stretching every tile to the tallest tile
-                        // in its row. Alternating results preserves scan order.
-                        let indexedResults = results.enumerated().map { (offset: $0.offset, element: $0.element) }
-                        let leftResults = indexedResults.compactMap { index, result in
-                            index.isMultiple(of: 2) ? (index, result) : nil
-                        }
-                        let rightResults = indexedResults.compactMap { index, result in
-                            index.isMultiple(of: 2) ? nil : (index, result)
-                        }
-
-                        Group {
-                            if isCompact {
-                                masonryColumn(indexedResults, imageSide: columnWidth)
-                            } else {
-                                HStack(alignment: .top, spacing: 12) {
-                                    masonryColumn(leftResults, imageSide: columnWidth)
-                                    masonryColumn(rightResults, imageSide: columnWidth)
-                                }
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                    }
-                }
-                .frame(width: screenWidth - 36, alignment: .topLeading)
-                .padding(.horizontal, 18)
-                .padding(.top, 16)
-                .padding(.bottom, 150)
-                .background(Theme.cardBackground)
-            }
-            .background(Theme.cardBackground)
-        }
-    }
-
-    @ViewBuilder
-    private func masonryColumn(_ items: [(offset: Int, element: FindRankedResult)], imageSide: CGFloat) -> some View {
-        VStack(spacing: 2) {
-            ForEach(items, id: \.element.id) { item in
-                GridTile(
-                    result: item.element,
-                    imageSide: imageSide,
-                    isSelected: item.offset == selectedResultIndex
-                ) {
-                    // Find is meant to take you to the thing you found,
-                    // not into another in-app detail screen.
-                    if let url = URL(string: item.element.url) {
-                        openURL(url)
-                    }
+        ResultGridView(
+            results: results,
+            query: baseQuery,
+            selectedIndex: selectedResultIndex,
+            screenWidth: screenWidth,
+            onBack: { selectedTab = .home },
+            onOpen: { result in
+                // Find is meant to take you to the thing you found,
+                // not into another in-app detail screen.
+                if let url = URL(string: result.url) {
+                    openURL(url)
                 }
             }
-        }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-    }
-
-    // Fixed above the scrolling grid (not inside the ScrollView), so it
-    // stays put while results scroll underneath - same treatment as the
-    // result shelf. Replaces the old plain "All results" heading with a
-    // back button, matching the web app: tapping it returns to the single
-    // current result instead of just being inert page-title text.
-    private func gridHeader(screenWidth: CGFloat) -> some View {
-        HStack {
-            Button {
-                selectedTab = .home
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(Theme.text)
-                    .frame(width: 44, height: 44)
-            }
-            .buttonStyle(.plain)
-            .contentShape(Rectangle())
-
-            Spacer()
-
-            Text("\(results.count) found")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Theme.subtext)
-
-            Color.clear
-                .frame(width: 44, height: 1)
-        }
-        .frame(width: screenWidth)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Theme.surface)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Theme.border)
-                .frame(height: 1)
-        }
-    }
-
-    private struct GridTile: View {
-        let result: FindRankedResult
-        let imageSide: CGFloat
-        let isSelected: Bool
-        let onSelect: () -> Void
-
-        @State private var imageFailed = false
-
-        private var imageURL: URL? {
-            guard !result.imageUrl.isEmpty else { return nil }
-            return URL(string: result.imageUrl)
-        }
-
-        private var showsImage: Bool {
-            imageURL != nil && !imageFailed
-        }
-
-        var body: some View {
-            Button(action: onSelect) {
-                VStack(alignment: .leading, spacing: 0) {
-                    if showsImage, let imageURL {
-                        AsyncImage(url: imageURL) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .scaledToFill()
-                            case .failure:
-                                Color.clear
-                                    .onAppear { imageFailed = true }
-                            default:
-                                Rectangle()
-                                    .fill(Theme.surface)
-                            }
-                        }
-                        .frame(width: imageSide, height: imageSide)
-                        .clipped()
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(result.displayUrl)
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(Theme.accent)
-                            .lineLimit(1)
-
-                        Text(result.title)
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(Theme.text)
-                            .multilineTextAlignment(.leading)
-                            .lineLimit(showsImage ? 2 : 3)
-
-                        Text(result.summary)
-                            .font(.system(size: 15))
-                            .foregroundStyle(Theme.subtext)
-                            .lineLimit(showsImage ? 3 : 9)
-                            .multilineTextAlignment(.leading)
-                    }
-                    .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                .background(Theme.cardBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(isSelected ? Theme.accent : Theme.border, lineWidth: isSelected ? 2 : 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .shadow(color: .black.opacity(0.08), radius: 7, y: 3)
-            }
-            .buttonStyle(.plain)
-        }
+        )
     }
 
     private func historyView(screenWidth: CGFloat) -> some View {
@@ -937,8 +806,8 @@ struct SearchView: View {
                     showingSearchScreen = true
                     selectedTab = .home
                 } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .semibold))
+                    Image(systemName: "house.fill")
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Theme.text)
                         .frame(width: 36, height: 36)
                         .background(Theme.cardBackground)
@@ -946,17 +815,17 @@ struct SearchView: View {
                         .overlay(Circle().stroke(Theme.border, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Back to home")
+                .accessibilityLabel("Home")
 
                 Text("Recent searches")
-                    .font(.system(size: 22, weight: .bold))
+                    .font(Theme.font(22, weight: .bold))
                 Spacer()
                 if !viewModel.searchHistory.isEmpty {
                     Button("Clear") {
                         viewModel.clearHistory()
                     }
                     .buttonStyle(.plain)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(Theme.font(16, weight: .semibold))
                     .foregroundStyle(.red)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
@@ -986,7 +855,7 @@ struct SearchView: View {
                                     Image(systemName: "clock")
                                         .foregroundStyle(Theme.subtext)
                                     Text(item)
-                                        .font(.system(size: 16))
+                                        .font(Theme.font(16))
                                         .foregroundStyle(Theme.text)
                                     Spacer()
                                 }
@@ -1015,8 +884,8 @@ struct SearchView: View {
                         showingSearchScreen = true
                         selectedTab = .home
                     } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
+                        Image(systemName: "house.fill")
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Theme.text)
                             .frame(width: 36, height: 36)
                             .background(Theme.cardBackground)
@@ -1024,47 +893,51 @@ struct SearchView: View {
                             .overlay(Circle().stroke(Theme.border, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Back to home")
+                    .accessibilityLabel("Home")
 
                     Text("About Find")
-                        .font(.system(size: 22, weight: .bold))
+                        .font(Theme.font(22, weight: .bold))
                     Spacer()
                 }
 
                 infoCard("01", "One destination, not a list", "Find picks the single strongest result instead of showing you 10 blue links. Swipe to see alternatives.")
                 infoCard("02", "Context pills & drill-down", "Tap a pill in the bottom bar to refine your search context. Find keeps your original query intact and swaps the active refinement instead of stacking duplicates.")
                 infoCard("03", "People → Lead Vault", "Find shows the best web results first. When a query looks like a person, buyer, or prospect, you can continue the search in Lead Vault when you’re ready.")
-                infoCard("04", "The philosophy", "Most search tools optimize for clicks. Find optimizes for answers. We believe the best search experience ends with you knowing something — not choosing between 10 links that might.")
+                infoCard("04", "The philosophy", "Most search tools optimize for clicks. Find optimizes for the right result. We believe the best search experience ends with you knowing something — not choosing between 10 links that might.")
 
                 VStack(spacing: 6) {
                     Text("BUILT BY")
-                        .font(.system(size: 13, weight: .black))
+                        .font(Theme.font(13, weight: .black))
                         .foregroundStyle(Theme.subtext)
-                    Text("Taliferro Tech")
-                        .font(.system(size: 22, weight: .bold))
+                    Link(TaliferroCompany.name, destination: TaliferroCompany.url)
+                        .font(Theme.font(22, weight: .bold))
+                        .foregroundStyle(Theme.accent)
                     Text("Find is part of TODD — the Momentum System designed for teams that move fast and need information faster.")
-                        .font(.system(size: 15))
+                        .font(Theme.font(15))
                         .foregroundStyle(Theme.subtext)
                         .multilineTextAlignment(.center)
 
                     HStack(spacing: 14) {
-                        Link("ty.showers@taliferro.com", destination: URL(string: "mailto:ty.showers@taliferro.com")!)
-                        Link("taliferro.com", destination: URL(string: "https://taliferro.com")!)
+                        Link(TaliferroCompany.email, destination: URL(string: "mailto:\(TaliferroCompany.email)")!)
+                        Link("taliferro.tech", destination: TaliferroCompany.url)
                     }
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(Theme.font(14, weight: .semibold))
                     .foregroundStyle(Theme.accent)
                     .padding(.top, 6)
 
-                    Text(LocalizedStringKey("© \(currentYear) TODD. Site design [Taliferro Group](https://taliferro.com/website-development). Taliferro Is Registered In The U.S. Patent And Trademark Office. All rights reserved. | [Contact](https://taliferro.com/contact.html)"))
-                        .font(.system(size: 12))
+                    // Same policy links as the web Info screen (MENU_COMPANY in @taliferro/ui).
+                    FlowLinks(links: TaliferroCompany.links)
+                        .padding(.top, 10)
+
+                    Text(verbatim: "© \(currentYear) \(TaliferroCompany.legalName). Taliferro Is Registered In The U.S. Patent And Trademark Office. All rights reserved.")
+                        .font(Theme.font(12))
                         .foregroundStyle(Theme.subtext)
                         .multilineTextAlignment(.center)
-                        .tint(Theme.accent)
                         .padding(.top, 12)
 
                     if let appVersionLabel {
                         Text(verbatim: "Version \(appVersionLabel)")
-                            .font(.system(size: 11))
+                            .font(Theme.font(11))
                             .foregroundStyle(Theme.subtext.opacity(0.7))
                             .padding(.top, 4)
                     }
@@ -1101,8 +974,8 @@ struct SearchView: View {
                         showingSearchScreen = true
                         selectedTab = .home
                     } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
+                        Image(systemName: "house.fill")
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Theme.text)
                             .frame(width: 36, height: 36)
                             .background(Theme.cardBackground)
@@ -1110,10 +983,10 @@ struct SearchView: View {
                             .overlay(Circle().stroke(Theme.border, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Back to home")
+                    .accessibilityLabel("Home")
 
                     Text("Awards")
-                        .font(.system(size: 22, weight: .bold))
+                        .font(Theme.font(22, weight: .bold))
                     Spacer()
                 }
 
@@ -1132,14 +1005,14 @@ struct SearchView: View {
         VStack(alignment: .leading, spacing: 10) {
             if tiltNav.isActive {
                 Text("Tilt navigation is active. Flick the device toward a pill to open it.")
-                    .font(.system(size: 14))
+                    .font(Theme.font(14))
                     .foregroundStyle(Theme.subtext)
 
                 Button {
                     tiltNav.disable()
                 } label: {
                     Text("Disable tilt navigation")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(Theme.font(15, weight: .bold))
                         .foregroundStyle(Theme.text)
                         .frame(maxWidth: .infinity)
                         .frame(height: 48)
@@ -1154,8 +1027,8 @@ struct SearchView: View {
                     tiltNav.enable()
                 } label: {
                     Text("Enable tilt navigation")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(.black)
+                        .font(Theme.font(15, weight: .bold))
+                        .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 48)
                         .background(Theme.accent)
@@ -1187,7 +1060,7 @@ struct SearchView: View {
     private var tiltDebugReadout: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("DEBUG")
-                .font(.system(size: 11, weight: .black))
+                .font(Theme.font(11, weight: .black))
                 .foregroundStyle(Theme.subtext)
             debugRow("roll rate", tiltNav.debugRollRate)
             debugRow("roll accum", tiltNav.debugRollAccum)
@@ -1211,7 +1084,7 @@ struct SearchView: View {
     private func debugRow(_ label: String, _ value: Double) -> some View {
         HStack {
             Text(label)
-                .font(.system(size: 12))
+                .font(Theme.font(12))
                 .foregroundStyle(Theme.subtext)
             Spacer()
             Text(String(format: "%.1f°", value))
@@ -1226,9 +1099,9 @@ struct SearchView: View {
             Spacer()
             if let url = currentShareURL {
                 Text("Share this result")
-                    .font(.system(size: 22, weight: .bold))
+                    .font(Theme.font(22, weight: .bold))
                 Text(url.absoluteString)
-                    .font(.system(size: 14))
+                    .font(Theme.font(14))
                     .foregroundStyle(Theme.subtext)
                     .multilineTextAlignment(.center)
                     .frame(width: min(screenWidth - 48, 320))
@@ -1236,13 +1109,13 @@ struct SearchView: View {
                     showingShareSheet = true
                 }
                 .buttonStyle(.plain)
-                .font(.system(size: 17, weight: .bold))
+                .font(Theme.font(17, weight: .bold))
                 .frame(width: 220, height: 50)
                 .background(Theme.accent)
-                .foregroundStyle(.black)
+                .foregroundStyle(.white)
                 .clipShape(Capsule())
                 Text("In TODD, this also offers the path to add the result into Knowledge when your account supports it.")
-                    .font(.system(size: 15))
+                    .font(Theme.font(15))
                     .foregroundStyle(Theme.subtext)
                     .multilineTextAlignment(.center)
                     .frame(width: min(screenWidth - 56, 320))
@@ -1256,78 +1129,75 @@ struct SearchView: View {
     }
 
     private var searchBar: some View {
-        TextField("Search for anything...", text: $viewModel.query)
-            .font(.system(size: 17))
-            .padding(.horizontal, 18)
-            .frame(height: 62)
-            .background(Theme.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(Theme.border, lineWidth: 1)
-            )
-            .submitLabel(.search)
-            .focused($isSearchFieldFocused)
-            .onSubmit {
-                isSearchFieldFocused = false
-                Task {
-                    await viewModel.runSearch()
-                    if viewModel.searchResponse != nil {
-                        showingSearchScreen = false
-                    }
-                }
-            }
-    }
-
-    private var resultSearchBar: some View {
-        HStack(spacing: 8) {
-            TextField("Search for anything...", text: $resultSearchQuery)
-                .font(.system(size: 16))
-                .padding(.horizontal, 16)
-                .frame(height: 50)
-                .background(Theme.cardBackground)
-                .clipShape(Capsule())
-                .overlay(
-                    Capsule()
-                        .stroke(Theme.border, lineWidth: 1)
-                )
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(Theme.muted)
+            TextField("Search for anything…", text: $viewModel.query)
+                .font(Theme.font(16))
+                .foregroundStyle(Theme.text)
                 .submitLabel(.search)
                 .focused($isSearchFieldFocused)
-                .onChange(of: resultSearchQuery) { _, newValue in
-                    beginNewSearchIfNeeded(newValue)
-                }
                 .onSubmit {
-                    submitResultSearch()
+                    isSearchFieldFocused = false
+                    Task {
+                        await viewModel.runSearch()
+                        if viewModel.searchResponse != nil {
+                            showingSearchScreen = false
+                        }
+                    }
                 }
+        }
+        .padding(.horizontal, 20)
+        .frame(height: 54)
+        .background(Theme.surface, in: Capsule())
+    }
+
+    // Persistent search above results, so a new search never needs Home.
+    private var resultSearchBar: some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Theme.muted)
+                TextField("Search for anything…", text: $resultSearchQuery)
+                    .font(Theme.font(16))
+                    .foregroundStyle(Theme.text)
+                    .submitLabel(.search)
+                    .focused($isSearchFieldFocused)
+                    .onChange(of: resultSearchQuery) { _, newValue in
+                        beginNewSearchIfNeeded(newValue)
+                    }
+                    .onSubmit {
+                        submitResultSearch()
+                    }
+            }
+            .padding(.horizontal, 18)
+            .frame(height: 46)
+            .background(Theme.surface, in: Capsule())
 
             Button {
                 submitResultSearch()
             } label: {
                 Group {
                     if viewModel.isLoading {
-                        ProgressView()
-                            .tint(.black)
+                        ProgressView().tint(.white)
                     } else {
                         Text("Find")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(.black)
+                            .font(Theme.font(15, weight: .bold))
+                            .foregroundStyle(.white)
                     }
                 }
-                .frame(width: 68, height: 50)
-                .background(Theme.accent)
-                .clipShape(Capsule())
+                .frame(width: 72, height: 46)
+                .background(Theme.blue, in: Capsule())
             }
             .buttonStyle(.plain)
             .disabled(viewModel.isLoading)
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 12)
-        .background(Theme.cardBackground)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Theme.border)
-                .frame(height: 1)
-        }
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, 4)
+        .background(Theme.bg)
         .transition(.move(edge: .top).combined(with: .opacity))
     }
 
@@ -1363,7 +1233,7 @@ struct SearchView: View {
         Image("FindLogo")
             .resizable()
             .scaledToFit()
-            .frame(width: 92, height: 92)
+            .frame(width: 64, height: 64)
     }
 
     private func footerStack(screenWidth: CGFloat, bottomInset: CGFloat) -> some View {
@@ -1376,7 +1246,12 @@ struct SearchView: View {
 
     private func bottomBar(screenWidth: CGFloat, bottomInset: CGFloat) -> some View {
         HStack(spacing: 0) {
-            ForEach(BottomTab.allCases.filter { $0 != .home }, id: \.rawValue) { tab in
+            // In All results, the All button becomes Home so there's an obvious
+            // way back to a new search.
+            let tabs = BottomTab.allCases
+                .filter { $0 != .home }
+                .map { $0 == .grid && selectedTab == .grid ? BottomTab.home : $0 }
+            ForEach(tabs, id: \.rawValue) { tab in
                 Button {
                     if tab == .home {
                         // Matches the web app's Home tab (resetToSearch()):
@@ -1394,25 +1269,18 @@ struct SearchView: View {
                 } label: {
                     VStack(spacing: 4) {
                         Image(systemName: tab.systemImage)
-                            .font(.system(size: 17, weight: .medium))
-
-                        Text(tab.rawValue)
-                            .font(.system(size: 8, weight: .semibold))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
+                            .font(.system(size: 20, weight: selectedTab == tab ? .semibold : .regular))
+                            .frame(height: 22)
+                        Text(tab.rawValue.capitalized)
+                            .font(Theme.font(11, weight: selectedTab == tab ? .semibold : .regular))
                     }
-                    .foregroundStyle(selectedTab == tab ? Theme.accent : Theme.subtext)
+                    .foregroundStyle(selectedTab == tab ? Theme.text : Theme.muted)
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: 42)
-                    .padding(.top, 5)
-                    .padding(.bottom, 4)
-                    .overlay(alignment: .top) {
-                        Rectangle()
-                            .fill(selectedTab == tab ? Theme.accent : .clear)
-                            .frame(height: 2)
-                    }
+                    .padding(.vertical, 2)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(tab.rawValue.capitalized)
             }
         }
         .frame(width: screenWidth)
@@ -1420,10 +1288,10 @@ struct SearchView: View {
         .padding(.top, 4)
         .padding(.bottom, max(10, bottomInset))
         .frame(height: 50 + max(10, bottomInset))
-        .background(Theme.cardBackground)
+        .background(Theme.chrome)
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(Theme.border)
+                .fill(Theme.hairline)
                 .frame(height: 1)
         }
     }
@@ -1442,17 +1310,17 @@ struct SearchView: View {
     private func infoCard(_ number: String, _ title: String, _ body: String) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(number)
-                .font(.system(size: 15, weight: .black))
-                .foregroundStyle(.black)
+                .font(Theme.font(15, weight: .black))
+                .foregroundStyle(.white)
                 .frame(width: 32, height: 32)
                 .background(Theme.accent)
                 .clipShape(Circle())
 
             Text(title)
-                .font(.system(size: 18, weight: .bold))
+                .font(Theme.font(18, weight: .bold))
 
             Text(body)
-                .font(.system(size: 15))
+                .font(Theme.font(15))
                 .foregroundStyle(Theme.subtext)
                 .lineSpacing(4)
         }
@@ -1472,7 +1340,7 @@ struct SearchView: View {
                 .font(.system(size: 28))
                 .foregroundStyle(Theme.subtext)
             Text(message)
-                .font(.system(size: 15))
+                .font(Theme.font(15))
                 .foregroundStyle(Theme.subtext)
         }
         .frame(maxWidth: .infinity, minHeight: 220)
@@ -1483,9 +1351,10 @@ struct SearchView: View {
     private var pillRow: some View {
         HStack(spacing: 0) {
             ForEach(Array(currentPills.enumerated()), id: \.element) { index, pill in
-                let isHighlighted = tiltNav.isActive && pill == highlightedPill
+                let isHighlighted = (tiltNav.isActive && pill == highlightedPill)
+                    || (viewModel.isLoading && pill == activePill)
                 let label = tiltNav.isActive && Self.tiltDirectionLetters.indices.contains(index)
-                    ? "\(Self.tiltDirectionLetters[index]): \(pill)"
+                    ? "\(Self.tiltDirectionLetters[index]) - \(pill)"
                     : pill
 
                 Button {
@@ -1509,18 +1378,26 @@ struct SearchView: View {
                             Text(label)
                         }
                     }
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(Theme.font(13, weight: .medium))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.55)
-                    .foregroundStyle(isHighlighted ? Color.white : Theme.text)
+                    .minimumScaleFactor(0.6)
+                    .foregroundStyle(isHighlighted ? Theme.background : Theme.subtext)
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 5)
+                    // Original context strip: flat gray cells; the lit one
+                    // becomes a solid black pill inside its cell.
+                    .background {
+                        if isHighlighted {
+                            Capsule().fill(Theme.text)
+                        }
+                    }
+                    .padding(.horizontal, 4)
                     .frame(maxWidth: .infinity, minHeight: 42)
-                    .background(isHighlighted ? Theme.accent : Color.clear)
-                    .overlay(
-                        Rectangle()
-                            .stroke(Theme.border, lineWidth: 1)
-                    )
+                    .overlay(alignment: .trailing) {
+                        if index < currentPills.count - 1 {
+                            Rectangle().fill(Theme.hairline).frame(width: 1)
+                        }
+                    }
                 }
                 .buttonStyle(.plain)
                 .disabled(viewModel.isLoading)
@@ -1533,10 +1410,10 @@ struct SearchView: View {
         pillRow
             .frame(width: screenWidth, alignment: .leading)
             .frame(height: 42)
-            .background(Theme.cardBackground)
+            .background(Theme.chrome)
             .overlay(alignment: .top) {
                 Rectangle()
-                    .fill(Theme.border)
+                    .fill(Theme.hairline)
                     .frame(height: 1)
             }
     }
@@ -1607,6 +1484,11 @@ struct SearchView: View {
         } else if conversionInputUnit == conversionBaseOutputUnit && conversionOutputUnit == conversionBaseInputUnit,
                   let baseRate = conversionBaseRate, baseRate != 0 {
             conversionRate = 1 / baseRate
+        } else if let rates = viewModel.searchResponse?.conversion?.rates,
+                  let inputRate = rates[conversionInputUnit], let outputRate = rates[conversionOutputUnit], inputRate != 0 {
+            // Backend conversions carry every supported currency's rate
+            // against the original input, so any pair can be worked out.
+            conversionRate = outputRate / inputRate
         } else {
             conversionRate = nil
         }
@@ -1687,70 +1569,12 @@ struct SearchView: View {
         return results.firstIndex(where: { $0.url == selected.url }) ?? 0
     }
 
-    private var heroImageURL: URL? {
-        if let fallback = fallbackHeroImageURL {
-            return fallback
-        }
-        if isGroundedAnswerSlide {
-            if let image = viewModel.searchResponse?.answer?.imageUrl,
-               let url = URL(string: image), !image.isEmpty {
-                return url
-            }
-            return nil
-        }
-        if let image = currentResult?.imageUrl, let url = URL(string: image), !image.isEmpty {
-            return url
-        }
-        if let image = viewModel.searchResponse?.answer?.imageUrl, let url = URL(string: image), !image.isEmpty {
-            return url
-        }
-        return nil
-    }
-
-    private var fallbackHeroImageURL: URL? {
-        let path: String
-        if isWeatherMode {
-            path = "find-weather.png"
-        } else if isConversionMode {
-            path = "find-conversion.png"
-        } else {
-            let searchText = [
-                viewModel.searchResponse?.query,
-                viewModel.searchResponse?.normalizedQuery,
-                viewModel.searchResponse?.answer?.text,
-                currentResult?.title
-            ].compactMap { $0 }.joined(separator: " ").lowercased()
-            guard searchText.range(of: #"\b(sports?|nfl|nba|wnba|mlb|nhl|soccer|football|basketball|baseball|hockey)\b"#, options: .regularExpression) != nil else {
-                return nil
-            }
-            path = "find-sports.png"
-        }
-        return URL(string: "https://find.taliferro.tech/fallback/\(path)")
-    }
-
-    private func heroImageView(url: URL, screenWidth: CGFloat) -> some View {
-        AsyncImage(url: url) { phase in
-            switch phase {
-            case .success(let image):
-                image
-                    .resizable()
-                    .scaledToFit()
-            default:
-                Rectangle()
-                    .fill(Theme.surface)
-            }
-        }
-        .frame(maxWidth: screenWidth, maxHeight: UIScreen.main.bounds.height * 0.42)
-        .frame(width: screenWidth)
-        .background(Theme.surface)
-    }
-
     private var isGroundedAnswerSlide: Bool {
         viewModel.viewingGroundedAnswer
     }
 
     // Whether a dedicated leading slide (page -1) exists for the backend's
-    // own generated answer - see FindResultPageCurlView/ResultPageView.
+    // own generated answer - see FindResultPagerView/ResultPageView.
     private var hasLeadingAnswer: Bool {
         guard viewModel.searchResponse?.queryType == .question else { return false }
         let text = viewModel.searchResponse?.answer?.text ?? ""
@@ -1805,6 +1629,33 @@ struct SearchView: View {
         return tabs + pills
     }
 
+    /// Previous result; from the first result, the leading answer page when
+    /// there is one, otherwise back to the search screen - same as web's
+    /// onPreviousResult().
+    private func goToPreviousResult() {
+        if viewModel.viewingGroundedAnswer {
+            goHome()
+        } else if selectedResultIndex > 0, results.indices.contains(selectedResultIndex - 1) {
+            viewModel.select(results[selectedResultIndex - 1])
+        } else if canGoBackToAnswer {
+            viewModel.viewingGroundedAnswer = true
+        } else {
+            goHome()
+        }
+    }
+
+    private var canGoBackToAnswer: Bool {
+        hasLeadingAnswer && !viewModel.viewingGroundedAnswer
+    }
+
+    private func goHome() {
+        viewModel.resetSearch()
+        showingSearchScreen = true
+        selectedTab = .home
+    }
+
+    /// "‹ Back" / "Next ›" - a word beside the chevron so it reads as navigation.
+
     private func goToNextResult() {
         if viewModel.viewingGroundedAnswer {
             viewModel.viewingGroundedAnswer = false
@@ -1837,7 +1688,8 @@ struct SearchView: View {
                         apiKey: "preview"
                     )
                 ),
-                awardsService: awardsService
+                awardsService: awardsService,
+                locationService: FindLocationService()
             ),
             awardsService: awardsService
         )
