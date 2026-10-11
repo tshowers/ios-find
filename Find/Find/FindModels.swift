@@ -10,6 +10,7 @@ enum FindQueryType: Codable, Hashable {
     case person
     case weather
     case conversion
+    case instant
     case local
     case movie
     case sports
@@ -24,6 +25,7 @@ enum FindQueryType: Codable, Hashable {
         case "person": self = .person
         case "weather": self = .weather
         case "conversion": self = .conversion
+        case "instant": self = .instant
         case "local": self = .local
         case "movie": self = .movie
         case "sports": self = .sports
@@ -40,6 +42,7 @@ enum FindQueryType: Codable, Hashable {
         case .person: try container.encode("person")
         case .weather: try container.encode("weather")
         case .conversion: try container.encode("conversion")
+        case .instant: try container.encode("instant")
         case .local: try container.encode("local")
         case .movie: try container.encode("movie")
         case .sports: try container.encode("sports")
@@ -85,6 +88,9 @@ enum FindConversionCategory: String, Codable {
     case weight
     case length
     case volume
+    case speed
+    case area
+    case data
 }
 
 struct FindConversionResult: Codable, Hashable {
@@ -100,6 +106,24 @@ struct FindConversionResult: Codable, Hashable {
     let source: String?
     /// Every supported currency against inputUnit (backend conversions only).
     var rates: [String: Double]? = nil
+    /// Every unit in the category with its factor to the base unit (backend unit conversions).
+    var unitOptions: [FindUnitOption]? = nil
+}
+
+struct FindUnitOption: Codable, Hashable {
+    let value: String
+    let label: String
+    let factor: Double?
+}
+
+/// An exact answer Find works out itself: date math, tips, percentages,
+/// sunrise/sunset (FindInstantAnswer in find-experience.service.ts).
+struct FindInstantAnswer: Codable, Hashable {
+    let kind: String
+    let label: String
+    let value: String
+    let title: String
+    let detail: String?
 }
 
 // OMDb details the backend attaches to a `movie` answer (results is empty).
@@ -217,6 +241,8 @@ struct FindRankedResult: Codable, Identifiable, Hashable {
     let phone: String?
     // Every verified location of a business that has more than one.
     let locations: [FindBusinessLocation]?
+    // "Why this result": short reasons the page doesn't already show.
+    let reasons: [String]?
     // Set on News/Sports headlines served from the hourly RSS snapshot.
     let rssSource: String?
     let publishedAt: String?
@@ -242,6 +268,7 @@ struct FindRankedResult: Codable, Identifiable, Hashable {
         address = try container.decodeIfPresent(String.self, forKey: .address)
         phone = try container.decodeIfPresent(String.self, forKey: .phone)
         locations = try container.decodeIfPresent([FindBusinessLocation].self, forKey: .locations)
+        reasons = try container.decodeIfPresent([String].self, forKey: .reasons)
         rssSource = try container.decodeIfPresent(String.self, forKey: .rssSource)
         publishedAt = try container.decodeIfPresent(String.self, forKey: .publishedAt)
     }
@@ -284,6 +311,7 @@ struct FindSearchResponse: Codable, Hashable {
     let timings: FindSearchTimings?
     // True when the results are News/Sports headlines from the RSS snapshot.
     let rssBacked: Bool?
+    var instant: FindInstantAnswer? = nil
 }
 
 struct FindSearchRequest: Encodable {
@@ -293,6 +321,10 @@ struct FindSearchRequest: Encodable {
     let postalCode: String?
     let latitude: Double?
     let longitude: Double?
+    // The user's time zone, and the answer types this app can show; the
+    // backend leaves newer types out for app versions that can't.
+    let timeZone: String
+    let features: [String]
 }
 
 enum FindFeedbackRating: String, Encodable, CaseIterable {

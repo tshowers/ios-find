@@ -250,6 +250,7 @@ extension FindQueryType {
         case .person: return "person"
         case .weather: return "weather"
         case .conversion: return "conversion"
+        case .instant: return "instant"
         case .local: return "local"
         case .movie: return "movie"
         case .sports: return "sports"

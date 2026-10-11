@@ -37,7 +37,9 @@ final class FindAPIClient {
             maxResults: min(max(maxResults, 1), 10),
             postalCode: Self.extractPostalCode(from: trimmedQuery),
             latitude: latitude,
-            longitude: longitude
+            longitude: longitude,
+            timeZone: TimeZone.current.identifier,
+            features: ["instant", "units"]
         )
 
         return try await post(path: "find/search", payload: payload, responseType: FindSearchResponse.self)

@@ -66,6 +66,12 @@ struct ResultPageView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
+                if let reasons = result?.reasons, !reasons.isEmpty {
+                    Text(reasons.joined(separator: " · "))
+                        .font(Theme.font(14))
+                        .foregroundStyle(Theme.muted)
+                }
+
                 if !locations.isEmpty {
                     locationsList
                 } else if !businessAddress.isEmpty {

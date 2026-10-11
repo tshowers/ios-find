@@ -285,6 +285,8 @@ struct SearchView: View {
                     weatherHomeView(screenWidth: screenWidth)
                 } else if isConversionMode {
                     conversionHomeView(screenWidth: screenWidth)
+                } else if let instant = viewModel.searchResponse?.instant, isInstantMode {
+                    instantHomeView(instant, screenWidth: screenWidth)
                 } else {
                     answerHomeView(screenWidth: screenWidth)
                 }
@@ -320,6 +322,55 @@ struct SearchView: View {
                 .frame(width: screenWidth)
                 .padding(.bottom, 150)
             }
+        }
+    }
+
+    // An exact answer Find works out itself (the web's .find-instant card).
+    private func instantHomeView(_ answer: FindInstantAnswer, screenWidth: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            resultPager(screenWidth: screenWidth)
+
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(answer.title)
+                            .font(Theme.font(15, weight: .semibold))
+                        Text(answer.value)
+                            .font(Theme.font(44, weight: .heavy))
+                            .tracking(-0.8)
+                            .minimumScaleFactor(0.5)
+                            .lineLimit(2)
+                            .textSelection(.enabled)
+                        if let detail = answer.detail, !detail.isEmpty {
+                            Text(detail)
+                                .font(Theme.font(15))
+                                .opacity(0.85)
+                        }
+                    }
+                    .foregroundStyle(Theme.tVioletFg)
+                    .padding(.horizontal, 22)
+                    .padding(.vertical, 20)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.tViolet, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+
+                    Button {
+                        UIPasteboard.general.string = "\(answer.title): \(answer.value)"
+                    } label: {
+                        Label("Copy result", systemImage: "doc.on.doc")
+                            .font(Theme.font(14, weight: .semibold))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Theme.blueInk)
+
+                    feedbackRow(meta: "Worked out by Find")
+                        .padding(.top, 12)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 6)
+                .frame(maxWidth: 560)
+                .frame(width: screenWidth)
+            }
+            .padding(.bottom, 150)
         }
     }
 
@@ -499,8 +550,12 @@ struct SearchView: View {
 
     /// Short unit shown in the unit pill: "USD", "°F", "km".
     private func conversionUnitShort(_ unit: String) -> String {
-        if conversionCategory == .temperature { return "°\(unit)" }
-        return unit == "l" ? "L" : unit
+        if conversionCategory == .temperature { return unit == "K" ? "K" : "°\(unit)" }
+        let shortNames = [
+            "l": "L", "floz": "fl oz", "kph": "km/h", "mps": "m/s", "knot": "kn", "sqin": "sq in", "sqft": "sq ft",
+            "sqm": "m²", "sqkm": "km²", "sqmi": "sq mi", "acre": "ac", "tonne": "t",
+        ]
+        return shortNames[unit] ?? unit
     }
 
     // Weather (3j): compact blue card, high/low and stats beside the temperature.
@@ -767,7 +822,11 @@ struct SearchView: View {
 
     // Weather, conversion and movie answers are one result: Back plus a label.
     private var isSingleResultMode: Bool {
-        isWeatherMode || isConversionMode || isMovieMode
+        isWeatherMode || isConversionMode || isMovieMode || isInstantMode
+    }
+
+    private var isInstantMode: Bool {
+        viewModel.searchResponse?.queryType == .instant && viewModel.searchResponse?.instant != nil
     }
 
     private var isMovieMode: Bool {
@@ -777,6 +836,7 @@ struct SearchView: View {
     private var pagerCenterLabel: String {
         if isWeatherMode { return "Weather" }
         if isMovieMode { return "Movie" }
+        if isInstantMode { return viewModel.searchResponse?.instant?.label ?? "Result" }
         return conversionCategory == .currency ? "Currency conversion" : "Unit conversion"
     }
 
@@ -1431,6 +1491,10 @@ struct SearchView: View {
     }
 
     private var conversionUnitOptions: [ConversionUnitOption] {
+        // Backend unit conversions list every unit in their category.
+        if let options = viewModel.searchResponse?.conversion?.unitOptions, !options.isEmpty {
+            return options.map { ConversionUnitOption(value: $0.value, label: $0.label) }
+        }
         switch conversionCategory {
         case .currency:
             return [
@@ -1445,7 +1509,7 @@ struct SearchView: View {
         case .weight: return [.init(value: "lb", label: "Pounds"), .init(value: "kg", label: "Kilograms")]
         case .length: return [.init(value: "in", label: "Inches"), .init(value: "cm", label: "Centimeters"), .init(value: "ft", label: "Feet"), .init(value: "m", label: "Meters")]
         case .volume: return [.init(value: "gal", label: "US Gallons"), .init(value: "l", label: "Liters")]
-        case .none: return []
+        case .speed, .area, .data, .none: return []
         }
     }
 
@@ -1500,8 +1564,8 @@ struct SearchView: View {
             return amount * rate
         }
         if conversion.category == .temperature {
-            if conversionInputUnit == conversionOutputUnit { return amount }
-            return conversionOutputUnit == "F" ? amount * 9 / 5 + 32 : (amount - 32) * 5 / 9
+            let celsius = conversionInputUnit == "F" ? (amount - 32) * 5 / 9 : conversionInputUnit == "K" ? amount - 273.15 : amount
+            return conversionOutputUnit == "F" ? celsius * 9 / 5 + 32 : conversionOutputUnit == "K" ? celsius + 273.15 : celsius
         }
         guard let inputFactor = unitFactor(conversion.category, unit: conversionInputUnit),
               let outputFactor = unitFactor(conversion.category, unit: conversionOutputUnit) else { return nil }
@@ -1509,12 +1573,16 @@ struct SearchView: View {
     }
 
     private func unitFactor(_ category: FindConversionCategory, unit: String) -> Double? {
+        if let factor = viewModel.searchResponse?.conversion?.unitOptions?.first(where: { $0.value == unit })?.factor {
+            return factor
+        }
         switch category {
         case .distance: return ["mi": 1609.344, "km": 1000][unit]
         case .weight: return ["lb": 0.45359237, "kg": 1][unit]
         case .length: return ["in": 0.0254, "cm": 0.01, "ft": 0.3048, "m": 1][unit]
         case .volume: return ["gal": 3.785411784, "l": 1][unit]
         case .temperature, .currency: return 1
+        case .speed, .area, .data: return nil
         }
     }
 
