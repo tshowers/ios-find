@@ -1325,7 +1325,7 @@ struct SearchView: View {
                 .background(Theme.accent)
                 .foregroundStyle(.white)
                 .clipShape(Capsule())
-                Text("In TODD, this also offers the path to add the result into Knowledge when your account supports it.")
+                Text("The link previews this result in Messages and opens it in Find.")
                     .font(Theme.font(15))
                     .foregroundStyle(Theme.subtext)
                     .multilineTextAlignment(.center)
