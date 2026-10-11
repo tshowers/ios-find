@@ -65,6 +65,22 @@ final class SearchViewModel: ObservableObject {
         return granted
     }
 
+    /// "Ask about this result". Never throws: a failure comes back as an
+    /// unanswered response that still offers the search.
+    func askFollowup(_ request: FindFollowupRequest) async -> FindFollowupResponse {
+        do {
+            return try await apiClient.followup(request)
+        } catch {
+            return FindFollowupResponse(success: false, mode: "answer", answered: false, answer: "", sources: [],
+                                        searchQuery: "\(request.query) \(request.followup)".trimmingCharacters(in: .whitespaces))
+        }
+    }
+
+    func runFollowupSearch(_ searchQuery: String) async {
+        query = searchQuery
+        await runSearch()
+    }
+
     /// Nearby results: re-run the search for places open right now, or back.
     var isOpenNowSearch: Bool {
         let current = searchResponse?.query ?? ""

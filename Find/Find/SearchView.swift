@@ -711,9 +711,9 @@ struct SearchView: View {
                         // exactly one page to show - nothing to swipe between,
                         // and the shelf chevrons are already disabled for
                         // this case (see resultShelf).
-                        ResultPageView(response: response, pageIndex: hasLeadingAnswer ? -1 : 0, screenWidth: screenWidth, feedbackStore: viewModel.feedbackStore)
+                        ResultPageView(response: response, pageIndex: hasLeadingAnswer ? -1 : 0, screenWidth: screenWidth, feedbackStore: viewModel.feedbackStore, followupActions: followupActions)
                     } else {
-                        FindResultPagerView(response: response, currentIndex: pagingIndexBinding, screenWidth: screenWidth, feedbackStore: viewModel.feedbackStore, hasLeadingAnswer: hasLeadingAnswer)
+                        FindResultPagerView(response: response, currentIndex: pagingIndexBinding, screenWidth: screenWidth, feedbackStore: viewModel.feedbackStore, followupActions: followupActions, hasLeadingAnswer: hasLeadingAnswer)
                     }
                 }
             }
@@ -866,6 +866,14 @@ struct SearchView: View {
                 }
             },
             openNow: gridOpenNowControl
+        )
+    }
+
+    private var followupActions: FindFollowupActions {
+        let model = viewModel
+        return FindFollowupActions(
+            ask: { request in await model.askFollowup(request) },
+            search: { searchQuery in Task { await model.runFollowupSearch(searchQuery) } }
         )
     }
 

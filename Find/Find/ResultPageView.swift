@@ -14,6 +14,8 @@ struct ResultPageView: View {
     let feedbackStore: FindFeedbackStore
     /// Advances to the next page (the headline "Next" preview card).
     var onNext: (() -> Void)?
+    /// "Ask about this result"; nil hides the box.
+    var followupActions: FindFollowupActions?
 
     @Environment(\.openURL) private var openURL
     @State private var ownImageFailed = false
@@ -116,6 +118,10 @@ struct ResultPageView: View {
 
                 if response.isHeadline, let next = response.results[safe: pageIndex + 1] {
                     nextPreview(next)
+                }
+
+                if !response.isHeadline, let followupActions {
+                    followupBox(followupActions)
                 }
 
                 referencesSection
@@ -262,6 +268,17 @@ struct ResultPageView: View {
     // answer - see FindResultPagerView's `hasLeadingAnswer` - so it never
     // co-opts a real ranked result's slot; page 0..<results.count always
     // shows that result's own title/summary/source, same as the grid does.
+    // The answer slide asks its references; any other page asks its own result.
+    private func followupBox(_ actions: FindFollowupActions) -> some View {
+        let references = response.answer?.references ?? []
+        let url = isGroundedAnswerSlide ? references.first?.url ?? "" : result?.url ?? ""
+        let title = isGroundedAnswerSlide ? references.first?.title ?? response.query : result?.title ?? ""
+        let sourceUrls = isGroundedAnswerSlide ? references.dropFirst().map(\.url) : []
+        return FollowupBox(query: response.query, url: url, title: title, sourceUrls: Array(sourceUrls), actions: actions)
+            .id(url)
+            .padding(.top, 4)
+    }
+
     private var isGroundedAnswerSlide: Bool {
         pageIndex == -1
     }

@@ -344,6 +344,31 @@ struct FindFeedbackResponse: Decodable {
     let success: Bool?
 }
 
+struct FindFollowupRequest: Encodable {
+    let query: String
+    let followup: String
+    let url: String
+    let title: String
+    let sourceUrls: [String]
+}
+
+/// A follow-up question about one result (FindFollowupResponse in
+/// find-experience.service.ts). mode "search" means run searchQuery instead.
+struct FindFollowupResponse: Decodable, Hashable {
+    let success: Bool
+    let mode: String
+    let answered: Bool
+    let answer: String
+    let sources: [FindFollowupSource]
+    let searchQuery: String
+}
+
+struct FindFollowupSource: Decodable, Hashable {
+    let title: String
+    let url: String
+    let displayUrl: String
+}
+
 struct FindSummarizeRequest: Encodable {
     let query: String
     let url: String

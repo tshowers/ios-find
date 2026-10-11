@@ -58,6 +58,10 @@ final class FindAPIClient {
         return String(query[zipRange])
     }
 
+    func followup(_ payload: FindFollowupRequest) async throws -> FindFollowupResponse {
+        try await post(path: "find/followup", payload: payload, responseType: FindFollowupResponse.self)
+    }
+
     func summarize(query: String, url: String, title: String) async throws -> String {
         let payload = FindSummarizeRequest(query: query, url: url, title: title)
         let response = try await post(path: "find/summarize", payload: payload, responseType: FindSummarizeResponse.self)
