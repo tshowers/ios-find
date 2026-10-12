@@ -17,6 +17,12 @@ All notable changes to this project are documented here.
   last Find answer" opens Docs' /knowledge/save with the last answer Ask
   Find gave. The Save tile and Siri build that link in one place
   (`KnowledgeSaveLink.swift`).
+- "Search with Find" control for Control Center, the Lock Screen and the
+  Action button (iOS 18): opens Find to a new search with the keyboard up.
+  The control lives in FindWidgetExtension; its intent
+  (`OpenFindSearchIntent.swift`) is compiled into the app too, so it opens
+  the app. For a voice search from the Action button, assign the "Ask Find"
+  shortcut instead (already available).
 
 ## 2026-10-02
 

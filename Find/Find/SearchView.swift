@@ -159,11 +159,30 @@ struct SearchView: View {
         .onReceive(NotificationCenter.default.publisher(for: .findOpenWatchedQuery)) { _ in
             openPendingWatchQuery()
         }
-        .onAppear { openPendingWatchQuery() }
+        // The "Search with Find" control opens a new search (also on a cold launch).
+        .onReceive(NotificationCenter.default.publisher(for: .findOpenNewSearch)) { _ in
+            openPendingNewSearch()
+        }
+        .onAppear {
+            openPendingWatchQuery()
+            openPendingNewSearch()
+        }
         .onOpenURL { url in handleFindURL(url) }
         .onChange(of: viewModel.searchResponse?.query) { _, _ in preparedShareURL = nil }
         .onDisappear {
             tiltNav.disable()
+        }
+    }
+
+    private func openPendingNewSearch() {
+        guard OpenFindSearchIntent.pending else { return }
+        OpenFindSearchIntent.pending = false
+        viewModel.resetSearch()
+        selectedTab = .home
+        showingSearchScreen = true
+        // Raise the keyboard once the search screen is on screen.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            isSearchFieldFocused = true
         }
     }
 

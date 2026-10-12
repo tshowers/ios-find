@@ -12,5 +12,8 @@ import SwiftUI
 struct FindWidgetBundle: WidgetBundle {
     var body: some Widget {
         FindWidget()
+        if #available(iOS 18.0, *) {
+            FindSearchControl()
+        }
     }
 }

@@ -69,6 +69,13 @@
 			);
 			target = 8C0DC38A307B514D00B28393 /* FindWidgetExtension */;
 		};
+		8C0DC3A0307C0A0000B28393 /* Exceptions for "Find" folder in "FindWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				OpenFindSearchIntent.swift,
+			);
+			target = 8C0DC38A307B514D00B28393 /* FindWidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -90,6 +97,9 @@
 		};
 		8C8612373009BA0900DCF0AA /* Find */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8C0DC3A0307C0A0000B28393 /* Exceptions for "Find" folder in "FindWidgetExtension" target */,
+			);
 			path = Find;
 			sourceTree = "<group>";
 		};

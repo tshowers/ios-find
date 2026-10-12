@@ -23,7 +23,7 @@ Everything in the web app (exact answers, places with distance and Open now, eve
 2. Signing is **automatic** with team `6377FLHLAG`. On another team, change it on all three targets under Signing & Capabilities, and register your own App Group (below).
 3. Pick the **Find** scheme and an iPhone or iPad simulator, then press ⌘R.
 
-The project uses Xcode's **file-system-synchronized groups**: a new `.swift` file dropped into `Find/Find/`, `Find/FindShare/` or `Find/FindWidget/` joins that target automatically; no project-file edits needed. There's no test target, so check changes with a build:
+The project uses Xcode's **file-system-synchronized groups**: a new `.swift` file dropped into `Find/Find/`, `Find/FindShare/` or `Find/FindWidget/` joins that target automatically; no project-file edits needed. The one exception: `Find/Find/OpenFindSearchIntent.swift` is also compiled into FindWidgetExtension (for the Control Center control) through a membership exception in the project file. A file needed by both targets must be added there the same way, or by ticking the second target in Xcode's File inspector. There's no test target, so check changes with a build:
 
 ```bash
 cd Find
@@ -36,7 +36,7 @@ xcodebuild -project Find.xcodeproj -scheme Find -destination 'generic/platform=i
 |---|---|---|
 | **Find** | `Find/Find/` | The app |
 | **FindShare** | `Find/FindShare/` | Share extension. It runs in its own process, so it has a small copy of the search call (`ShareModel.swift`) instead of using the app's client. Accepts text and web pages only (App Review rejects "accept everything"). |
-| **FindWidgetExtension** | `Find/FindWidget/` | Home-screen widget. Reads the latest Watch change from the App Group and opens the app with `find://` links. |
+| **FindWidgetExtension** | `Find/FindWidget/` | Home-screen widget. Reads the latest Watch change from the App Group and opens the app with `find://` links. Also the "Search with Find" control (Control Center, Lock Screen, Action button; iOS 18). |
 
 All three must have the same version and build number; bump `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` on every target together.
 
