@@ -17,7 +17,10 @@ extension Notification.Name {
 @MainActor
 final class FindWatchStore: ObservableObject {
     @Published private(set) var watches: [FindWatch] = [] {
-        didSet { shareWithWidget() }
+        didSet {
+            shareWithWidget()
+            FindSpotlight.indexWatches(watches)
+        }
     }
     @Published private(set) var busyKey: String?
     @Published var message = ""

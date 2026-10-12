@@ -23,6 +23,12 @@ All notable changes to this project are documented here.
   (`OpenFindSearchIntent.swift`) is compiled into the app too, so it opens
   the app. For a voice search from the Action button, assign the "Ask Find"
   shortcut instead (already available).
+- Spotlight (`FindSpotlight.swift`): recent searches show in iPhone search
+  with their top answer, and watched finds with their latest change.
+  Tapping one runs that search in Find. Clearing History removes them;
+  searches that drop out of the 20-search History are removed too.
+- Locations: "How far?" (also in 1.4) works out each location's distance
+  on the device when the search sent no position.
 
 ## 2026-10-02
 

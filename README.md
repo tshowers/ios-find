@@ -75,6 +75,8 @@ Find/Find/
   WatchButton.swift          Watch / Watching button
   AskFindIntent.swift        Siri / Shortcuts: Ask Find (spoken answer + card), Save that to Knowledge
   KnowledgeSaveLink.swift    Docs /knowledge/save link, shared by the Save tile and Siri
+  FindSpotlight.swift        iPhone search: recent searches and watched finds
+  OpenFindSearchIntent.swift "Search with Find" control's intent (also in FindWidgetExtension)
   FindLocationService.swift  Location, asked only when needed
   TaliferroCompany.swift     Company and policy links (mirrors MENU_COMPANY in taliferro-ui)
   Theme.swift                Colour tokens (match the web's)

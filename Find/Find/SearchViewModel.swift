@@ -167,6 +167,7 @@ final class SearchViewModel: ObservableObject {
                 && !answerText.isEmpty
                 && !resolvedResponse.results.isEmpty
             addToHistory(trimmed)
+            FindSpotlight.indexSearch(trimmed, response: resolvedResponse)
             if let unlocked = awardsService.recordSearch() {
                 pendingAwardUnlock = unlocked
             }
@@ -226,6 +227,7 @@ final class SearchViewModel: ObservableObject {
     func clearHistory() {
         searchHistory = []
         UserDefaults.standard.removeObject(forKey: historyKey)
+        FindSpotlight.removeAllSearches()
     }
 
     func resetSearch() {
@@ -247,6 +249,7 @@ final class SearchViewModel: ObservableObject {
     private func addToHistory(_ term: String) {
         var next = searchHistory.filter { $0.caseInsensitiveCompare(term) != .orderedSame }
         next.insert(term, at: 0)
+        FindSpotlight.removeSearches(Array(next.dropFirst(20)))
         searchHistory = Array(next.prefix(20))
         UserDefaults.standard.set(searchHistory, forKey: historyKey)
     }

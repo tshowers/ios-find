@@ -1,3 +1,4 @@
+import CoreSpotlight
 import SwiftUI
 
 struct SearchView: View {
@@ -168,6 +169,13 @@ struct SearchView: View {
             openPendingNewSearch()
         }
         .onOpenURL { url in handleFindURL(url) }
+        // A tapped Find result in iPhone search (FindSpotlight) runs that search.
+        .onContinueUserActivity(CSSearchableItemActionType) { activity in
+            guard let query = FindSpotlight.query(for: activity) else { return }
+            var link = URLComponents(string: "find://search")!
+            link.queryItems = [URLQueryItem(name: "q", value: query)]
+            if let url = link.url { handleFindURL(url) }
+        }
         .onChange(of: viewModel.searchResponse?.query) { _, _ in preparedShareURL = nil }
         .onDisappear {
             tiltNav.disable()
