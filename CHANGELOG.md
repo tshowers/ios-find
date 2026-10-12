@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here.
 
+## 2026-10-12
+
+### Changed
+- Marketing version bumped 1.4 → 1.5 (build 8). 1.5 is built on its own
+  branch so 1.4 can ship unchanged.
+
+### Added
+- Info: the company mission, "Our mission is to make search obsolete."
+  (written in 2010), above the TODD line. Matches the web app's Info panel.
+
 ## 2026-10-02
 
 ### Changed

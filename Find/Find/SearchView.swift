@@ -1123,6 +1123,16 @@ struct SearchView: View {
                     Link(TaliferroCompany.name, destination: TaliferroCompany.url)
                         .font(Theme.font(22, weight: .bold))
                         .foregroundStyle(Theme.accent)
+                    VStack(spacing: 2) {
+                        Text("“Our mission is to make search obsolete.”")
+                            .font(Theme.font(17, weight: .semibold))
+                            .italic()
+                            .foregroundStyle(Theme.text)
+                        Text("Written in 2010. Still the plan.")
+                            .font(Theme.font(12))
+                            .foregroundStyle(Theme.subtext)
+                    }
+                    .multilineTextAlignment(.center)
                     Text("Find is part of TODD — the Momentum System designed for teams that move fast and need information faster.")
                         .font(Theme.font(15))
                         .foregroundStyle(Theme.subtext)
