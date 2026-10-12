@@ -5,8 +5,7 @@ All notable changes to this project are documented here.
 ## 2026-10-12
 
 ### Changed
-- Marketing version bumped 1.4 → 1.5 (build 8). 1.5 is built on its own
-  branch so 1.4 can ship unchanged.
+- Build bumped 7 → 8. Still version 1.4: everything below ships in 1.4.
 
 ### Added
 - Info: the company mission, "Our mission is to make search obsolete."
@@ -41,7 +40,7 @@ All notable changes to this project are documented here.
 - Shake for "not what I meant": clears the results and starts a new search
   with the keyboard up. Ignored while tilt navigation is on. Shake no
   longer offers "Undo Typing".
-- Locations: "How far?" (also in 1.4) works out each location's distance
+- Locations: "How far?" works out each location's distance
   on the device when the search sent no position.
 
 ## 2026-10-02
