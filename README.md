@@ -15,7 +15,7 @@ Everything in the web app (exact answers, places with distance and Open now, eve
 - **Watch notifications.** A push when a watched find changes; tapping it opens that search.
 - **"Find" in the share sheet.** Select text in Safari (or share a page) to see Find's answer in the sheet.
 - **Home-screen widget** (small, medium). A search box plus the latest Watch change.
-- **Siri and Shortcuts.** "Ask Find" / "Search Find" speaks the answer without opening the app.
+- **Siri and Shortcuts.** "Ask Find" / "Search Find" speaks the answer and shows it as a card, without opening the app. "Save that to Knowledge in Find" saves the last answer to Knowledge.
 
 ## Set up
 
@@ -73,7 +73,8 @@ Find/Find/
   FindWatchStore.swift       Watch a find: list, create/remove/renew, notifications, widget data
   FollowupBox.swift          "Ask about this result"
   WatchButton.swift          Watch / Watching button
-  AskFindIntent.swift        Siri / Shortcuts
+  AskFindIntent.swift        Siri / Shortcuts: Ask Find (spoken answer + card), Save that to Knowledge
+  KnowledgeSaveLink.swift    Docs /knowledge/save link, shared by the Save tile and Siri
   FindLocationService.swift  Location, asked only when needed
   TaliferroCompany.swift     Company and policy links (mirrors MENU_COMPANY in taliferro-ui)
   Theme.swift                Colour tokens (match the web's)

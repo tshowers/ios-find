@@ -11,6 +11,12 @@ All notable changes to this project are documented here.
 ### Added
 - Info: the company mission, "Our mission is to make search obsolete."
   (written in 2010), above the TODD line. Matches the web app's Info panel.
+- Siri: "Ask Find" now shows its answer as a card (label, headline,
+  detail, source) under the spoken answer.
+- Siri: "Save that to Knowledge in Find" / "Save that with Find" / "Save the
+  last Find answer" opens Docs' /knowledge/save with the last answer Ask
+  Find gave. The Save tile and Siri build that link in one place
+  (`KnowledgeSaveLink.swift`).
 
 ## 2026-10-02
 

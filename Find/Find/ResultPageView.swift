@@ -444,27 +444,16 @@ struct ResultPageView: View {
         return actions + saveToKnowledgeAction(result)
     }
 
-    /// "Save to Knowledge" (saveToKnowledgeAction in find-home.component.ts):
-    /// opens Docs' /knowledge/save with this result filled in. Docs signs the
-    /// person in if needed and saves it free; editing it needs Docs.
+    /// "Save to Knowledge": opens Docs' /knowledge/save with this result
+    /// filled in (see KnowledgeSaveLink).
     private func saveToKnowledgeAction(_ result: FindRankedResult) -> [FindAction] {
-        let query = response.query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return [] }
-        let answer = (result.answer ?? result.summary)
-            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
-            .trimmingCharacters(in: .whitespaces)
-        let keywords = result.pills
-            .filter { $0.lowercased() != query.lowercased() && $0.range(of: #"^\d+(\.\d+)?\s*mi$|^★"#, options: .regularExpression) == nil }
-            .prefix(8)
-        var link = URLComponents(string: "https://docs.taliferro.tech/knowledge/save")!
-        link.queryItems = [
-            URLQueryItem(name: "q", value: query),
-            URLQueryItem(name: "title", value: businessName.isEmpty ? result.title : businessName),
-            URLQueryItem(name: "answer", value: String(answer.prefix(1500))),
-            URLQueryItem(name: "url", value: result.url),
-            URLQueryItem(name: "keywords", value: keywords.joined(separator: ",")),
-        ]
-        guard let url = link.url else { return [] }
+        guard let url = KnowledgeSaveLink.url(
+            query: response.query,
+            title: businessName.isEmpty ? result.title : businessName,
+            answer: result.answer ?? result.summary,
+            sourceURL: result.url,
+            keywords: result.pills
+        ) else { return [] }
         return [FindAction(id: "knowledge", shortLabel: "Save", systemImage: "books.vertical", kind: .open(url))]
     }
 
