@@ -1,3 +1,4 @@
+import CoreLocation
 import SwiftUI
 import NaturalLanguage
 
@@ -21,6 +22,11 @@ struct ResultPageView: View {
 
     @Environment(\.openURL) private var openURL
     @State private var ownImageFailed = false
+    // "How far?" on a business's locations: worked out on the device.
+    @State private var deviceLocations: (resultURL: String, locations: [FindBusinessLocation])?
+    @State private var locatingDistances = false
+    @State private var distanceNote = ""
+    @State private var locationService: FindLocationService?
 
     private enum ImageState { case own, fallback, none }
 
@@ -460,8 +466,44 @@ struct ResultPageView: View {
     /// A business with more than one verified location lists them all in its
     /// result (currentLocations in find-home.component.ts).
     private var locations: [FindBusinessLocation] {
-        let all = result?.locations ?? []
+        let worked = deviceLocations.flatMap { $0.resultURL == result?.url ? $0.locations : nil }
+        let all = worked ?? result?.locations ?? []
         return all.count > 1 ? all : []
+    }
+
+    /// A search that didn't send a position has no distances; "How far?"
+    /// works them out here (canShowLocationDistances on the web).
+    private var canShowLocationDistances: Bool {
+        !locations.isEmpty
+            && !locations.contains { $0.distance != nil }
+            && locations.contains { $0.latitude != nil && $0.longitude != nil }
+    }
+
+    /// The position stays on the device: each location's distance, nearest
+    /// first (like the backend's addLocationDistances).
+    private func showLocationDistances() async {
+        distanceNote = ""
+        locatingDistances = true
+        let service = locationService ?? FindLocationService()
+        locationService = service
+        let coordinate = await service.currentCoordinate()
+        locatingDistances = false
+        guard let coordinate else {
+            distanceNote = "Location is off for Find. Turn it on in Settings, then try again."
+            return
+        }
+        let here = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        let resultURL = result?.url ?? ""
+        let sorted = locations
+            .map { location in
+                guard let latitude = location.latitude, let longitude = location.longitude else { return location }
+                var located = location
+                let miles = here.distance(from: CLLocation(latitude: latitude, longitude: longitude)) / 1609.34
+                located.distance = String(format: "%.1f mi", miles)
+                return located
+            }
+            .sorted { (Double($0.distance?.split(separator: " ").first ?? "") ?? .infinity) < (Double($1.distance?.split(separator: " ").first ?? "") ?? .infinity) }
+        deviceLocations = (resultURL, sorted)
     }
 
     /// "Bonhomie Coffee Bar (at Labour Temple)" reads as "Labour Temple".
@@ -482,6 +524,27 @@ struct ResultPageView: View {
                 .tracking(0.8)
                 .foregroundStyle(Theme.muted)
                 .padding(.vertical, 8)
+            if canShowLocationDistances {
+                Button {
+                    Task { await showLocationDistances() }
+                } label: {
+                    Text(locatingDistances ? "Finding you…" : "How far?")
+                        .font(Theme.font(14, weight: .semibold))
+                        .foregroundStyle(Theme.blueInk)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(Theme.surface, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(locatingDistances)
+                .padding(.bottom, 8)
+                if !distanceNote.isEmpty {
+                    Text(distanceNote)
+                        .font(Theme.font(13))
+                        .foregroundStyle(Theme.muted)
+                        .padding(.bottom, 8)
+                }
+            }
             ForEach(locations, id: \.self) { location in
                 Divider()
                 HStack(alignment: .firstTextBaseline, spacing: 12) {

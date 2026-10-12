@@ -279,7 +279,10 @@ struct FindBusinessLocation: Codable, Hashable {
     let address: String
     let phone: String?
     let mapsUrl: String?
-    let distance: String?
+    var distance: String?
+    /// The location's own (public) position, for "How far?" on the device.
+    let latitude: Double?
+    let longitude: Double?
 }
 
 struct FindSearchHandoff: Codable, Hashable {
