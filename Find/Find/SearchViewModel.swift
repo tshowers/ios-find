@@ -168,6 +168,9 @@ final class SearchViewModel: ObservableObject {
                 && !resolvedResponse.results.isEmpty
             addToHistory(trimmed)
             FindSpotlight.indexSearch(trimmed, response: resolvedResponse)
+            if FindActivityMonitor.shared.mode == .driving, let answer = FindSiriAnswer(response: resolvedResponse) {
+                FindSpeaker.shared.speak(answer.spoken)
+            }
             if let unlocked = awardsService.recordSearch() {
                 pendingAwardUnlock = unlocked
             }

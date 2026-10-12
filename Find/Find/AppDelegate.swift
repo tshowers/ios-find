@@ -21,6 +21,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        // Shake starts a new search (SearchView), not "Undo Typing".
+        application.applicationSupportsShakeToEdit = false
         // Tokens can change, so re-register on each launch once allowed
         // (permission itself is only asked when something is first watched).
         UNUserNotificationCenter.current().getNotificationSettings { settings in
@@ -62,5 +64,19 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             AppDelegate.pendingWatchQuery = query
             NotificationCenter.default.post(name: .findOpenWatchedQuery, object: query)
         }
+    }
+}
+
+extension Notification.Name {
+    /// The phone was shaken (UIWindow.motionEnded below).
+    static let findDeviceShaken = Notification.Name("findDeviceShaken")
+}
+
+extension UIWindow {
+    open override func motionEnded(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
+        if motion == .motionShake {
+            NotificationCenter.default.post(name: .findDeviceShaken, object: nil)
+        }
+        super.motionEnded(motion, with: event)
     }
 }

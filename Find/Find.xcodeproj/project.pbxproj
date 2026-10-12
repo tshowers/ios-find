@@ -603,6 +603,7 @@
 				INFOPLIST_KEY_FIND_API_BASE_URL = "$(FIND_API_BASE_URL)";
 				INFOPLIST_KEY_FIND_API_KEY = "$(FIND_API_KEY)";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Find uses your location to show local weather, nearby places, and how far away and which way places are in your search results.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "Find uses Motion & Fitness, only if you turn on \"Adapt to what I'm doing\", to read answers aloud while you drive and show walking times while you walk. It stays on your phone.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -643,6 +644,7 @@
 				INFOPLIST_KEY_FIND_API_BASE_URL = "$(FIND_API_BASE_URL)";
 				INFOPLIST_KEY_FIND_API_KEY = "$(FIND_API_KEY)";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Find uses your location to show local weather, nearby places, and how far away and which way places are in your search results.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "Find uses Motion & Fitness, only if you turn on \"Adapt to what I'm doing\", to read answers aloud while you drive and show walking times while you walk. It stays on your phone.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

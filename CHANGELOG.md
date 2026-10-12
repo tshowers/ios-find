@@ -32,6 +32,15 @@ All notable changes to this project are documented here.
   distance, a tap when it's straight ahead, and Directions. With several
   locations it aims at the nearest; a single address is looked up on the
   device. Location permission text now mentions "which way".
+- "Adapt to what I'm doing" (Info, off by default, asks for Motion &
+  Fitness): when driving, Find reads each answer aloud (other audio is
+  turned down; a "Reading the answer · Stop" bar shows); when walking,
+  distances on locations and in Point show walking times (3 mph).
+  `FindActivityMonitor.swift`, `FindSpeaker.swift`.
+- Turn the phone face-down to stop an answer being read aloud.
+- Shake for "not what I meant": clears the results and starts a new search
+  with the keyboard up. Ignored while tilt navigation is on. Shake no
+  longer offers "Undo Typing".
 - Locations: "How far?" (also in 1.4) works out each location's distance
   on the device when the search sent no position.
 

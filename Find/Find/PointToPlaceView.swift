@@ -155,6 +155,7 @@ struct PointToPlaceView: View {
     let title: String
     let mapsURL: URL?
     @StateObject private var pointer: PlacePointer
+    @ObservedObject private var activity = FindActivityMonitor.shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
@@ -189,6 +190,12 @@ struct PointToPlaceView: View {
             Text(distanceText)
                 .font(Theme.font(34, weight: .bold))
                 .foregroundStyle(Theme.text)
+            if let meters = pointer.distanceMeters,
+               let walk = activity.walkingTime(for: String(format: "%.1f mi", meters / 1609.34)) {
+                Text(walk)
+                    .font(Theme.font(17, weight: .semibold))
+                    .foregroundStyle(Theme.muted)
+            }
             Text(hint)
                 .font(Theme.font(15))
                 .foregroundStyle(Theme.muted)

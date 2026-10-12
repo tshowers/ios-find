@@ -28,6 +28,7 @@ struct ResultPageView: View {
     @State private var distanceNote = ""
     @State private var locationService: FindLocationService?
     @State private var showingPointer = false
+    @ObservedObject private var activity = FindActivityMonitor.shared
 
     private enum ImageState { case own, fallback, none }
 
@@ -583,9 +584,16 @@ struct ResultPageView: View {
                     }
                     Spacer(minLength: 0)
                     if let distance = location.distance {
-                        Text(distance)
-                            .font(Theme.font(14, weight: .semibold))
-                            .foregroundStyle(Theme.text)
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(distance)
+                                .font(Theme.font(14, weight: .semibold))
+                                .foregroundStyle(Theme.text)
+                            if let walk = activity.walkingTime(for: distance) {
+                                Text(walk)
+                                    .font(Theme.font(12))
+                                    .foregroundStyle(Theme.muted)
+                            }
+                        }
                     }
                 }
                 .padding(.vertical, 10)

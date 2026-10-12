@@ -15,6 +15,9 @@ struct SearchView: View {
     @State private var activePill = ""
     @State private var conversionAmountText = ""
     @State private var locationSettingBlocked = false
+    @State private var activitySettingBlocked = false
+    @ObservedObject private var activity = FindActivityMonitor.shared
+    @ObservedObject private var speaker = FindSpeaker.shared
     @State private var preparedShareURL: URL?
     @State private var conversionInputUnit = ""
     @State private var conversionOutputUnit = ""
@@ -126,6 +129,10 @@ struct SearchView: View {
             .padding(.bottom, footerReservedHeight(bottomInset: geometry.safeAreaInsets.bottom))
             .background(Theme.background)
             .overlay(alignment: .top) {
+                if speaker.isSpeaking {
+                    speakingBar
+                        .padding(.top, geometry.safeAreaInsets.top + 8)
+                }
                 #if DEBUG
                 if tiltNav.isActive {
                     tiltDebugReadout
@@ -164,6 +171,9 @@ struct SearchView: View {
         .onReceive(NotificationCenter.default.publisher(for: .findOpenNewSearch)) { _ in
             openPendingNewSearch()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .findDeviceShaken)) { _ in
+            handleShake()
+        }
         .onAppear {
             openPendingWatchQuery()
             openPendingNewSearch()
@@ -185,6 +195,19 @@ struct SearchView: View {
     private func openPendingNewSearch() {
         guard OpenFindSearchIntent.pending else { return }
         OpenFindSearchIntent.pending = false
+        startNewSearch()
+    }
+
+    /// Shake = "not what I meant": clear the results and start over, keyboard
+    /// up. Ignored while tilt navigation is on (shaking would also flick).
+    private func handleShake() {
+        guard !tiltNav.isActive, viewModel.searchResponse != nil else { return }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        speaker.stop()
+        startNewSearch()
+    }
+
+    private func startNewSearch() {
         viewModel.resetSearch()
         selectedTab = .home
         showingSearchScreen = true
@@ -1075,6 +1098,60 @@ struct SearchView: View {
         .background(Theme.cardBackground)
     }
 
+    /// Shown while an answer is read aloud (driving).
+    private var speakingBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "speaker.wave.2.fill")
+            Text("Reading the answer")
+                .font(Theme.font(14, weight: .semibold))
+            Button("Stop") { speaker.stop() }
+                .font(Theme.font(14, weight: .bold))
+                .foregroundStyle(Theme.blueInk)
+        }
+        .foregroundStyle(Theme.text)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Theme.surface, in: Capsule())
+        .shadow(color: .black.opacity(0.12), radius: 8, y: 2)
+    }
+
+    // "Adapt to what I'm doing": driving reads answers aloud, walking adds
+    // walking times (FindActivityMonitor). iOS only - browsers can't tell.
+    private var activitySettingCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: Binding(
+                get: { activity.isEnabled },
+                set: { enabled in
+                    Task {
+                        let allowed = await activity.setEnabled(enabled)
+                        activitySettingBlocked = enabled && !allowed
+                    }
+                }
+            )) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Adapt to what I'm doing")
+                        .font(Theme.font(16, weight: .bold))
+                        .foregroundStyle(Theme.text)
+                    Text("When you're driving, Find reads answers aloud (turn the phone face-down to stop). When you're walking, distances show walking times. Uses Motion & Fitness on your phone; nothing is sent.")
+                        .font(Theme.font(13))
+                        .foregroundStyle(Theme.subtext)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .tint(Theme.accent)
+
+            if activitySettingBlocked {
+                Text("Motion & Fitness is off for Find. Turn it on in Settings › Privacy & Security › Motion & Fitness, then try again.")
+                    .font(Theme.font(13))
+                    .foregroundStyle(Theme.danger)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
     // "Use my location" (the web's .find-info-setting card).
     private var locationSettingCard: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -1142,6 +1219,9 @@ struct SearchView: View {
                 infoCard("04", "The philosophy", "Most search tools optimize for clicks. Find optimizes for the right result. We believe the best search experience ends with you knowing something — not choosing between 10 links that might.")
 
                 locationSettingCard
+                if activity.isSupported {
+                    activitySettingCard
+                }
 
                 VStack(spacing: 6) {
                     Text("BUILT BY")
