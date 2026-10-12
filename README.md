@@ -76,6 +76,7 @@ Find/Find/
   AskFindIntent.swift        Siri / Shortcuts: Ask Find (spoken answer + card), Save that to Knowledge
   KnowledgeSaveLink.swift    Docs /knowledge/save link, shared by the Save tile and Siri
   FindSpotlight.swift        iPhone search: recent searches and watched finds
+  PointToPlaceView.swift     Point: arrow toward a place (compass + position)
   OpenFindSearchIntent.swift "Search with Find" control's intent (also in FindWidgetExtension)
   FindLocationService.swift  Location, asked only when needed
   TaliferroCompany.swift     Company and policy links (mirrors MENU_COMPANY in taliferro-ui)

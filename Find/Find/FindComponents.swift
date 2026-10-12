@@ -105,6 +105,7 @@ struct FindAction: Identifiable {
     enum Kind {
         case open(URL)
         case copy(String)
+        case run(() -> Void)
     }
 
     let id: String
@@ -155,6 +156,8 @@ struct FindActionTiles: View {
                 try? await Task.sleep(for: .seconds(1.5))
                 if copiedID == action.id { copiedID = nil }
             }
+        case .run(let handler):
+            handler()
         }
     }
 }

@@ -27,6 +27,7 @@ struct ResultPageView: View {
     @State private var locatingDistances = false
     @State private var distanceNote = ""
     @State private var locationService: FindLocationService?
+    @State private var showingPointer = false
 
     private enum ImageState { case own, fallback, none }
 
@@ -44,6 +45,13 @@ struct ResultPageView: View {
             .frame(maxWidth: 720, alignment: .leading)
             .frame(width: screenWidth)
             .padding(.bottom, 150)
+        }
+        .sheet(isPresented: $showingPointer) {
+            PointToPlaceView(
+                title: businessName.isEmpty ? (result?.title ?? "") : businessName,
+                targets: pointTargets,
+                mapsURL: appleMapsURL
+            )
         }
     }
 
@@ -440,6 +448,9 @@ struct ResultPageView: View {
         if isPlace, let mapsURL = appleMapsURL {
             actions.append(FindAction(id: "maps", shortLabel: "Go", systemImage: "location.fill", kind: .open(mapsURL)))
         }
+        if !pointTargets.isEmpty {
+            actions.append(FindAction(id: "point", shortLabel: "Point", systemImage: "location.north.line", kind: .run { showingPointer = true }))
+        }
         if let phoneURL {
             actions.append(FindAction(id: "call", shortLabel: "Call", systemImage: "phone", kind: .open(phoneURL)))
         }
@@ -582,6 +593,16 @@ struct ResultPageView: View {
             Divider()
         }
         .frame(maxWidth: 420, alignment: .leading)
+    }
+
+    /// What "Point" aims at: every location (it picks the nearest), or the
+    /// one address.
+    private var pointTargets: [PointTarget] {
+        if !locations.isEmpty {
+            return locations.map { PointTarget(name: locationLabel($0), address: $0.address, latitude: $0.latitude, longitude: $0.longitude) }
+        }
+        guard isPlace, !placeAddress.isEmpty else { return [] }
+        return [PointTarget(name: "", address: placeAddress)]
     }
 
     private var placeAddress: String {

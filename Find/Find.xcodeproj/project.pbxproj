@@ -602,7 +602,7 @@
 				INFOPLIST_FILE = "Find-Info.plist";
 				INFOPLIST_KEY_FIND_API_BASE_URL = "$(FIND_API_BASE_URL)";
 				INFOPLIST_KEY_FIND_API_KEY = "$(FIND_API_KEY)";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Find uses your location to show local weather, nearby places, and how far away places are in your search results.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Find uses your location to show local weather, nearby places, and how far away and which way places are in your search results.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -642,7 +642,7 @@
 				INFOPLIST_FILE = "Find-Info.plist";
 				INFOPLIST_KEY_FIND_API_BASE_URL = "$(FIND_API_BASE_URL)";
 				INFOPLIST_KEY_FIND_API_KEY = "$(FIND_API_KEY)";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Find uses your location to show local weather, nearby places, and how far away places are in your search results.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Find uses your location to show local weather, nearby places, and how far away and which way places are in your search results.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

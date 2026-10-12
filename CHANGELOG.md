@@ -27,6 +27,11 @@ All notable changes to this project are documented here.
   with their top answer, and watched finds with their latest change.
   Tapping one runs that search in Find. Clearing History removes them;
   searches that drop out of the 20-search History are removed too.
+- Point: a Point tile on place results opens a big arrow that turns toward
+  the place as the phone moves (compass + position), with the live
+  distance, a tap when it's straight ahead, and Directions. With several
+  locations it aims at the nearest; a single address is looked up on the
+  device. Location permission text now mentions "which way".
 - Locations: "How far?" (also in 1.4) works out each location's distance
   on the device when the search sent no position.
 
