@@ -2,6 +2,47 @@
 
 All notable changes to this project are documented here.
 
+## 2026-10-12
+
+### Changed
+- Build bumped 7 → 8. Still version 1.4: everything below ships in 1.4.
+
+### Added
+- Info: the company mission, "Our mission is to make search obsolete."
+  (written in 2010), above the TODD line. Matches the web app's Info panel.
+- Siri: "Ask Find" now shows its answer as a card (label, headline,
+  detail, source) under the spoken answer.
+- Siri: "Save that to Knowledge in Find" / "Save that with Find" / "Save the
+  last Find answer" opens Docs' /knowledge/save with the last answer Ask
+  Find gave. The Save tile and Siri build that link in one place
+  (`KnowledgeSaveLink.swift`).
+- "Search with Find" control for Control Center, the Lock Screen and the
+  Action button (iOS 18): opens Find to a new search with the keyboard up.
+  The control lives in FindWidgetExtension; its intent
+  (`OpenFindSearchIntent.swift`) is compiled into the app too, so it opens
+  the app. For a voice search from the Action button, assign the "Ask Find"
+  shortcut instead (already available).
+- Spotlight (`FindSpotlight.swift`): recent searches show in iPhone search
+  with their top answer, and watched finds with their latest change.
+  Tapping one runs that search in Find. Clearing History removes them;
+  searches that drop out of the 20-search History are removed too.
+- Point: a Point tile on place results opens a big arrow that turns toward
+  the place as the phone moves (compass + position), with the live
+  distance, a tap when it's straight ahead, and Directions. With several
+  locations it aims at the nearest; a single address is looked up on the
+  device. Location permission text now mentions "which way".
+- "Adapt to what I'm doing" (Info, off by default, asks for Motion &
+  Fitness): when driving, Find reads each answer aloud (other audio is
+  turned down; a "Reading the answer · Stop" bar shows); when walking,
+  distances on locations and in Point show walking times (3 mph).
+  `FindActivityMonitor.swift`, `FindSpeaker.swift`.
+- Turn the phone face-down to stop an answer being read aloud.
+- Shake for "not what I meant": clears the results and starts a new search
+  with the keyboard up. Ignored while tilt navigation is on. Shake no
+  longer offers "Undo Typing".
+- Locations: "How far?" works out each location's distance
+  on the device when the search sent no position.
+
 ## 2026-10-02
 
 ### Changed

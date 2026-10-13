@@ -6,19 +6,122 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		8C0DC380307B505A00B28393 /* FindShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8C0DC376307B505A00B28393 /* FindShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8C0DC38E307B514D00B28393 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C0DC38D307B514D00B28393 /* WidgetKit.framework */; };
+		8C0DC390307B514D00B28393 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C0DC38F307B514D00B28393 /* SwiftUI.framework */; };
+		8C0DC39B307B514E00B28393 /* FindWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8C0DC38B307B514D00B28393 /* FindWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		8C0DC37E307B505A00B28393 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8C86122D3009BA0900DCF0AA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8C0DC375307B505A00B28393;
+			remoteInfo = FindShare;
+		};
+		8C0DC399307B514E00B28393 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8C86122D3009BA0900DCF0AA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8C0DC38A307B514D00B28393;
+			remoteInfo = FindWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		8C0DC385307B505A00B28393 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				8C0DC380307B505A00B28393 /* FindShare.appex in Embed Foundation Extensions */,
+				8C0DC39B307B514E00B28393 /* FindWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		8C0DC376307B505A00B28393 /* FindShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FindShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		8C0DC38B307B514D00B28393 /* FindWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FindWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		8C0DC38D307B514D00B28393 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		8C0DC38F307B514D00B28393 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		8C0DC3A0307B519700B28393 /* FindWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FindWidgetExtension.entitlements; sourceTree = "<group>"; };
 		8C8612353009BA0900DCF0AA /* Find.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Find.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		8C0DC381307B505A00B28393 /* Exceptions for "FindShare" folder in "FindShare" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8C0DC375307B505A00B28393 /* FindShare */;
+		};
+		8C0DC39C307B514E00B28393 /* Exceptions for "FindWidget" folder in "FindWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8C0DC38A307B514D00B28393 /* FindWidgetExtension */;
+		};
+		8C0DC3A0307C0A0000B28393 /* Exceptions for "Find" folder in "FindWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				OpenFindSearchIntent.swift,
+			);
+			target = 8C0DC38A307B514D00B28393 /* FindWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		8C0DC377307B505A00B28393 /* FindShare */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8C0DC381307B505A00B28393 /* Exceptions for "FindShare" folder in "FindShare" target */,
+			);
+			path = FindShare;
+			sourceTree = "<group>";
+		};
+		8C0DC391307B514D00B28393 /* FindWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8C0DC39C307B514E00B28393 /* Exceptions for "FindWidget" folder in "FindWidgetExtension" target */,
+			);
+			path = FindWidget;
+			sourceTree = "<group>";
+		};
 		8C8612373009BA0900DCF0AA /* Find */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8C0DC3A0307C0A0000B28393 /* Exceptions for "Find" folder in "FindWidgetExtension" target */,
+			);
 			path = Find;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		8C0DC373307B505A00B28393 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8C0DC388307B514D00B28393 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8C0DC390307B514D00B28393 /* SwiftUI.framework in Frameworks */,
+				8C0DC38E307B514D00B28393 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8C8612323009BA0900DCF0AA /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -29,10 +132,23 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		8C0DC38C307B514D00B28393 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				8C0DC38D307B514D00B28393 /* WidgetKit.framework */,
+				8C0DC38F307B514D00B28393 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		8C86122C3009BA0900DCF0AA = {
 			isa = PBXGroup;
 			children = (
+				8C0DC3A0307B519700B28393 /* FindWidgetExtension.entitlements */,
 				8C8612373009BA0900DCF0AA /* Find */,
+				8C0DC377307B505A00B28393 /* FindShare */,
+				8C0DC391307B514D00B28393 /* FindWidget */,
+				8C0DC38C307B514D00B28393 /* Frameworks */,
 				8C8612363009BA0900DCF0AA /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +157,8 @@
 			isa = PBXGroup;
 			children = (
 				8C8612353009BA0900DCF0AA /* Find.app */,
+				8C0DC376307B505A00B28393 /* FindShare.appex */,
+				8C0DC38B307B514D00B28393 /* FindWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,6 +166,50 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		8C0DC375307B505A00B28393 /* FindShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8C0DC382307B505A00B28393 /* Build configuration list for PBXNativeTarget "FindShare" */;
+			buildPhases = (
+				8C0DC372307B505A00B28393 /* Sources */,
+				8C0DC373307B505A00B28393 /* Frameworks */,
+				8C0DC374307B505A00B28393 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				8C0DC377307B505A00B28393 /* FindShare */,
+			);
+			name = FindShare;
+			packageProductDependencies = (
+			);
+			productName = FindShare;
+			productReference = 8C0DC376307B505A00B28393 /* FindShare.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		8C0DC38A307B514D00B28393 /* FindWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8C0DC39D307B514E00B28393 /* Build configuration list for PBXNativeTarget "FindWidgetExtension" */;
+			buildPhases = (
+				8C0DC387307B514D00B28393 /* Sources */,
+				8C0DC388307B514D00B28393 /* Frameworks */,
+				8C0DC389307B514D00B28393 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				8C0DC391307B514D00B28393 /* FindWidget */,
+			);
+			name = FindWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = FindWidgetExtension;
+			productReference = 8C0DC38B307B514D00B28393 /* FindWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		8C8612343009BA0900DCF0AA /* Find */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 8C8612403009BA0B00DCF0AA /* Build configuration list for PBXNativeTarget "Find" */;
@@ -55,10 +217,13 @@
 				8C8612313009BA0900DCF0AA /* Sources */,
 				8C8612323009BA0900DCF0AA /* Frameworks */,
 				8C8612333009BA0900DCF0AA /* Resources */,
+				8C0DC385307B505A00B28393 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				8C0DC37F307B505A00B28393 /* PBXTargetDependency */,
+				8C0DC39A307B514E00B28393 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				8C8612373009BA0900DCF0AA /* Find */,
@@ -77,9 +242,15 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2660;
+				LastSwiftUpdateCheck = 2700;
 				LastUpgradeCheck = 2660;
 				TargetAttributes = {
+					8C0DC375307B505A00B28393 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					8C0DC38A307B514D00B28393 = {
+						CreatedOnToolsVersion = 27.0;
+					};
 					8C8612343009BA0900DCF0AA = {
 						CreatedOnToolsVersion = 26.6;
 					};
@@ -100,11 +271,27 @@
 			projectRoot = "";
 			targets = (
 				8C8612343009BA0900DCF0AA /* Find */,
+				8C0DC375307B505A00B28393 /* FindShare */,
+				8C0DC38A307B514D00B28393 /* FindWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		8C0DC374307B505A00B28393 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8C0DC389307B514D00B28393 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8C8612333009BA0900DCF0AA /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -115,6 +302,20 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		8C0DC372307B505A00B28393 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8C0DC387307B514D00B28393 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8C8612313009BA0900DCF0AA /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -124,7 +325,148 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		8C0DC37F307B505A00B28393 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8C0DC375307B505A00B28393 /* FindShare */;
+			targetProxy = 8C0DC37E307B505A00B28393 /* PBXContainerItemProxy */;
+		};
+		8C0DC39A307B514E00B28393 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8C0DC38A307B514D00B28393 /* FindWidgetExtension */;
+			targetProxy = 8C0DC399307B514E00B28393 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		8C0DC383307B505A00B28393 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = FindShare/FindShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 8;
+				DEVELOPMENT_TEAM = 6377FLHLAG;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FindShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FindShare;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = tech.taliferro.Find.FindShare;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8C0DC384307B505A00B28393 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = FindShare/FindShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 8;
+				DEVELOPMENT_TEAM = 6377FLHLAG;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FindShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FindShare;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = tech.taliferro.Find.FindShare;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		8C0DC39E307B514E00B28393 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = FindWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 8;
+				DEVELOPMENT_TEAM = 6377FLHLAG;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FindWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FindWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = tech.taliferro.Find.FindWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8C0DC39F307B514E00B28393 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = FindWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 8;
+				DEVELOPMENT_TEAM = 6377FLHLAG;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FindWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FindWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = tech.taliferro.Find.FindWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		8C86123E3009BA0B00DCF0AA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -249,16 +591,19 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Find/Find.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = 6377FLHLAG;
 				ENABLE_PREVIEWS = YES;
 				FIND_API_BASE_URL = "https://api.taliferro.tech/api";
 				FIND_API_KEY = "AIzaSyCAAgRd8tq9PXkPKE2zddseYtZ-Xx_P8mU";
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Find-Info.plist";
 				INFOPLIST_KEY_FIND_API_BASE_URL = "$(FIND_API_BASE_URL)";
 				INFOPLIST_KEY_FIND_API_KEY = "$(FIND_API_KEY)";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Find uses your location to show local weather and nearby places in your search results.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Find uses your location to show local weather, nearby places, and how far away and which way places are in your search results.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "Find uses Motion & Fitness, only if you turn on \"Adapt to what I'm doing\", to read answers aloud while you drive and show walking times while you walk. It stays on your phone.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -268,9 +613,10 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = tech.taliferro.Find;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -286,16 +632,19 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Find/Find.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = 6377FLHLAG;
 				ENABLE_PREVIEWS = YES;
 				FIND_API_BASE_URL = "https://api.taliferro.tech/api";
 				FIND_API_KEY = "AIzaSyCAAgRd8tq9PXkPKE2zddseYtZ-Xx_P8mU";
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Find-Info.plist";
 				INFOPLIST_KEY_FIND_API_BASE_URL = "$(FIND_API_BASE_URL)";
 				INFOPLIST_KEY_FIND_API_KEY = "$(FIND_API_KEY)";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Find uses your location to show local weather and nearby places in your search results.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Find uses your location to show local weather, nearby places, and how far away and which way places are in your search results.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "Find uses Motion & Fitness, only if you turn on \"Adapt to what I'm doing\", to read answers aloud while you drive and show walking times while you walk. It stays on your phone.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -305,9 +654,10 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = tech.taliferro.Find;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -321,6 +671,24 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		8C0DC382307B505A00B28393 /* Build configuration list for PBXNativeTarget "FindShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8C0DC383307B505A00B28393 /* Debug */,
+				8C0DC384307B505A00B28393 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8C0DC39D307B514E00B28393 /* Build configuration list for PBXNativeTarget "FindWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8C0DC39E307B514E00B28393 /* Debug */,
+				8C0DC39F307B514E00B28393 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		8C8612303009BA0900DCF0AA /* Build configuration list for PBXProject "Find" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

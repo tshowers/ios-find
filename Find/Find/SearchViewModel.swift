@@ -17,6 +17,10 @@ final class SearchViewModel: ObservableObject {
     // answer.text as a slide *before* the ranked results, rather than
     // treating it as a replacement for the top-ranked source card.
     @Published var viewingGroundedAnswer = false
+    // "Use my location" on the Info tab (useLocationEverywhere in
+    // find-home.component.ts): off by default. When on, every search sends
+    // the position; when off, only "near me" and bare weather searches do.
+    @Published private(set) var useLocationEverywhere = UserDefaults.standard.bool(forKey: "find.useLocation")
 
     let feedbackStore: FindFeedbackStore
     private let apiClient: FindAPIClient
@@ -40,6 +44,79 @@ final class SearchViewModel: ObservableObject {
         pattern: #"^(?:(?:what'?s|what is|how'?s|how is|the)\s+)?(?:weather|forecast|temperature)(?:\s+(?:like|today|tomorrow|tonight|right now|currently|this week|this weekend|now))?[?.!]*$"#,
         options: [.caseInsensitive]
     )
+
+    private static let openNowPattern = try! NSRegularExpression(
+        pattern: #"\b(?:open\s+(?:right\s+)?now|currently\s+open)\b"#,
+        options: [.caseInsensitive]
+    )
+
+    /// Turning it on asks for permission right away; returns false when the
+    /// system won't give a position (denied or unavailable).
+    @discardableResult
+    func setUseLocationEverywhere(_ enabled: Bool) async -> Bool {
+        guard enabled else {
+            useLocationEverywhere = false
+            UserDefaults.standard.set(false, forKey: "find.useLocation")
+            return true
+        }
+        let granted = await locationService.currentCoordinate() != nil
+        useLocationEverywhere = granted
+        UserDefaults.standard.set(granted, forKey: "find.useLocation")
+        return granted
+    }
+
+    /// A short share link for the current result; falls back to a plain
+    /// find.taliferro.tech/?query= link if the backend can't make one.
+    func shareLink(title: String, summary: String, result: FindRankedResult?) async -> URL? {
+        let current = (searchResponse?.query ?? query).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !current.isEmpty else { return nil }
+        var fallback = URLComponents(string: "https://find.taliferro.tech/")!
+        fallback.queryItems = [URLQueryItem(name: "query", value: current)]
+        let request = FindShareRequest(
+            query: current, title: title, summary: String(summary.prefix(300)),
+            url: result?.url ?? "", displayUrl: result?.displayUrl ?? "", imageUrl: result?.imageUrl ?? ""
+        )
+        if let link = try? await apiClient.share(request).url, let url = URL(string: link) {
+            return url
+        }
+        return fallback.url
+    }
+
+    /// "Ask about this result". Never throws: a failure comes back as an
+    /// unanswered response that still offers the search.
+    func askFollowup(_ request: FindFollowupRequest) async -> FindFollowupResponse {
+        do {
+            return try await apiClient.followup(request)
+        } catch {
+            return FindFollowupResponse(success: false, mode: "answer", answered: false, answer: "", sources: [],
+                                        searchQuery: "\(request.query) \(request.followup)".trimmingCharacters(in: .whitespaces))
+        }
+    }
+
+    func runFollowupSearch(_ searchQuery: String) async {
+        query = searchQuery
+        await runSearch()
+    }
+
+    /// Nearby results: re-run the search for places open right now, or back.
+    var isOpenNowSearch: Bool {
+        let current = searchResponse?.query ?? ""
+        return Self.openNowPattern.firstMatch(in: current, range: NSRange(current.startIndex..., in: current)) != nil
+    }
+
+    func toggleOpenNow() async {
+        let current = (searchResponse?.query ?? query).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !current.isEmpty else { return }
+        if isOpenNowSearch {
+            let range = NSRange(current.startIndex..., in: current)
+            query = Self.openNowPattern.stringByReplacingMatches(in: current, range: range, withTemplate: "")
+                .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+                .trimmingCharacters(in: .whitespaces)
+        } else {
+            query = "\(current) open now"
+        }
+        await runSearch()
+    }
 
     private static func isLocationShapedQuery(_ query: String) -> Bool {
         let range = NSRange(query.startIndex..., in: query)
@@ -70,7 +147,7 @@ final class SearchViewModel: ObservableObject {
         // Only requested for a location-shaped query (never on launch) -
         // resolves to nil on denial/timeout rather than throwing, so the
         // search still runs without coordinates instead of blocking.
-        let coordinate = Self.isLocationShapedQuery(trimmed)
+        let coordinate = useLocationEverywhere || Self.isLocationShapedQuery(trimmed)
             ? await locationService.currentCoordinate()
             : nil
 
@@ -90,6 +167,10 @@ final class SearchViewModel: ObservableObject {
                 && !answerText.isEmpty
                 && !resolvedResponse.results.isEmpty
             addToHistory(trimmed)
+            FindSpotlight.indexSearch(trimmed, response: resolvedResponse)
+            if FindActivityMonitor.shared.mode == .driving, let answer = FindSiriAnswer(response: resolvedResponse) {
+                FindSpeaker.shared.speak(answer.spoken)
+            }
             if let unlocked = awardsService.recordSearch() {
                 pendingAwardUnlock = unlocked
             }
@@ -149,6 +230,7 @@ final class SearchViewModel: ObservableObject {
     func clearHistory() {
         searchHistory = []
         UserDefaults.standard.removeObject(forKey: historyKey)
+        FindSpotlight.removeAllSearches()
     }
 
     func resetSearch() {
@@ -170,6 +252,7 @@ final class SearchViewModel: ObservableObject {
     private func addToHistory(_ term: String) {
         var next = searchHistory.filter { $0.caseInsensitiveCompare(term) != .orderedSame }
         next.insert(term, at: 0)
+        FindSpotlight.removeSearches(Array(next.dropFirst(20)))
         searchHistory = Array(next.prefix(20))
         UserDefaults.standard.set(searchHistory, forKey: historyKey)
     }
