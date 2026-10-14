@@ -75,6 +75,7 @@ Find/Find/
   WatchButton.swift          Watch / Watching button
   AskFindIntent.swift        Siri / Shortcuts: Ask Find (spoken answer + card), Save that to Knowledge
   KnowledgeSaveLink.swift    Docs /knowledge/save link, shared by the Save tile and Siri
+  HeadlineFeeds.swift        ESPN/NPR headlines fetched on the phone, merged into News/Sports
   FindSpotlight.swift        iPhone search: recent searches and watched finds
   PointToPlaceView.swift     Point: arrow toward a place (compass + position)
   FindActivityMonitor.swift  "Adapt to what I'm doing": driving / walking (Motion & Fitness)

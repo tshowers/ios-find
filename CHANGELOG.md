@@ -40,6 +40,12 @@ All notable changes to this project are documented here.
 - Shake for "not what I meant": clears the results and starts a new search
   with the keyboard up. Ignored while tilt navigation is on. Shake no
   longer offers "Undo Typing".
+- Headlines: Sports adds ESPN and NPR stories, News adds NPR, fetched on
+  the phone (`HeadlineFeeds.swift`) because both block Find's cloud
+  servers. Merged into the backend's headlines by time: duplicates
+  dropped, 6 newest per added source, 20 total. A slow or blocked feed
+  (4 s limit) just means no extra stories. NPR's tracking-pixel "image"
+  is ignored.
 - Locations: "How far?" works out each location's distance
   on the device when the search sent no position.
 

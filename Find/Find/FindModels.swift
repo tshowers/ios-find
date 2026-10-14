@@ -224,7 +224,7 @@ struct FindAnswerBlock: Codable, Hashable {
 
 struct FindRankedResult: Codable, Identifiable, Hashable {
     var id: String { url }
-    let rank: Int
+    var rank: Int
     let title: String
     let summary: String
     let answer: String?
@@ -271,6 +271,38 @@ struct FindRankedResult: Codable, Identifiable, Hashable {
         reasons = try container.decodeIfPresent([String].self, forKey: .reasons)
         rssSource = try container.decodeIfPresent(String.self, forKey: .rssSource)
         publishedAt = try container.decodeIfPresent(String.self, forKey: .publishedAt)
+    }
+}
+
+extension FindRankedResult {
+    /// A News/Sports headline the app fetched itself (HeadlineFeeds), shaped
+    /// like the backend's RSS results.
+    init(headlineTitle: String, summary: String, url: String, imageUrl: String, source: String, publishedAt: String, rank: Int = 0) {
+        self.rank = rank
+        self.title = headlineTitle
+        self.summary = summary
+        self.answer = nil
+        self.url = url
+        self.displayUrl = source
+        self.imageUrl = imageUrl
+        self.sourceType = .publisher
+        self.confidence = 0.95
+        self.pills = []
+        self.isFirstParty = false
+        self.hours = nil
+        self.address = nil
+        self.phone = nil
+        self.locations = nil
+        self.reasons = nil
+        self.rssSource = source
+        self.publishedAt = publishedAt
+    }
+
+    /// The same result at a new position (after merging headlines).
+    func withRank(_ rank: Int) -> FindRankedResult {
+        var copy = self
+        copy.rank = rank
+        return copy
     }
 }
 

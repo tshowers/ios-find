@@ -144,6 +144,10 @@ final class SearchViewModel: ObservableObject {
         errorMessage = ""
         summaryText = ""
 
+        // Headlines from feeds the backend can't reach (ESPN, NPR) load on
+        // the phone alongside the search, and are merged into an RSS response.
+        async let extraHeadlines = HeadlineFeeds.shared.extraHeadlines(for: HeadlineFeeds.section(for: trimmed))
+
         // Only requested for a location-shaped query (never on launch) -
         // resolves to nil on denial/timeout rather than throwing, so the
         // search still runs without coordinates instead of blocking.
@@ -152,11 +156,14 @@ final class SearchViewModel: ObservableObject {
             : nil
 
         do {
-            let response = try await apiClient.search(
+            var response = try await apiClient.search(
                 query: trimmed,
                 latitude: coordinate?.latitude,
                 longitude: coordinate?.longitude
             )
+            if response.rssBacked == true {
+                response = HeadlineFeeds.merge(response, extra: await extraHeadlines)
+            }
             let resolvedResponse = response.applyingLocalConversionFallback(to: trimmed)
             searchResponse = resolvedResponse
             selectedResult = resolvedResponse.results.indices.contains(resolvedResponse.selectedIndex)
