@@ -37,6 +37,8 @@ actor HeadlineFeeds {
     private static let maxHeadlines = 20
     // ESPN posts so often it would fill all 20; each added source gets its 6 newest.
     private static let maxPerAddedSource = 6
+    // Added stories without a photo go last, and take at most 6 of the 20.
+    private static let maxWithoutPhoto = 6
 
     private var cache: [Section: (at: Date, items: [FindRankedResult])] = [:]
 
@@ -73,7 +75,8 @@ actor HeadlineFeeds {
     }
 
     /// Backend headlines plus extra ones (6 newest per source): no duplicate
-    /// links, newest first, 20 at most.
+    /// links, newest first, 20 at most. Added stories without a photo
+    /// (ESPN's feeds have none) go after the ones with photos.
     static func merge(_ response: FindSearchResponse, extra: [FindRankedResult]) -> FindSearchResponse {
         guard !extra.isEmpty else { return response }
         // Drop duplicates first: ESPN's top and NFL feeds share stories.
@@ -88,12 +91,18 @@ actor HeadlineFeeds {
                 return count < maxPerAddedSource
             }
         let cutoff = Date().addingTimeInterval(-maxAge)
-        let results = (response.results + added)
-            .filter { result in
-                guard let published = result.publishedAt.flatMap(isoDate) else { return true }
-                return published >= cutoff
-            }
-            .sorted { ($0.publishedAt ?? "") > ($1.publishedAt ?? "") }
+        func newestFirst(_ list: [FindRankedResult]) -> [FindRankedResult] {
+            list
+                .filter { result in
+                    guard let published = result.publishedAt.flatMap(isoDate) else { return true }
+                    return published >= cutoff
+                }
+                .sorted { ($0.publishedAt ?? "") > ($1.publishedAt ?? "") }
+        }
+        let last = Array(newestFirst(added.filter { $0.imageUrl.isEmpty }).prefix(maxWithoutPhoto))
+        let first = newestFirst(response.results + added.filter { !$0.imageUrl.isEmpty })
+            .prefix(max(0, maxHeadlines - last.count))
+        let results = (Array(first) + last)
             .prefix(maxHeadlines)
             .enumerated()
             .map { index, result in result.withRank(index + 1) }

@@ -39,7 +39,7 @@ Tick each box as you go. If something fails, write what happened under **Problem
 
 ### News and sports
 - [ ] Tap **News** and **Sports** on Home → headline pages with source and "4h ago" times; **Read** opens the article.
-- [ ] **Sports** includes **ESPN** and **NPR** stories mixed in by time (up to 6 each), alongside CBS Sports, BBC Sport, Sky Sports and MLB.com. The footer credits them.
+- [ ] **Sports** includes **ESPN** and **NPR** stories alongside CBS Sports, BBC Sport, Sky Sports, MLB.com and FOX Sports. Stories without a photo (ESPN, most NPR Sports) come **last**, at most 6. The footer credits every source.
 - [ ] **News** includes **NPR** stories, most with a photo.
 - [ ] On a network that blocks ESPN or NPR (or a very weak signal), Sports/News still load the other sources with no error.
 
