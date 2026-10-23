@@ -145,6 +145,11 @@ struct ResultPageView: View {
 
                 referencesSection
 
+                // TODD Market's "From local stores": shopping searches only, under the result.
+                if response.shoppingIntent == true {
+                    MarketStripView(query: response.query)
+                }
+
                 FindFeedbackRow(
                     store: feedbackStore,
                     query: response.query,
@@ -782,7 +787,7 @@ struct ResultPageView: View {
 
         var parts = [String(format: "%.1fs total", Double(timings.totalMs) / 1000)]
         if timings.candidateCount > 0 {
-            parts.append("\(timings.candidateCount) candidates")
+            parts.append("\(timings.candidateCount) sources")
         }
         if timings.enrichedCount > 0 {
             parts.append("\(timings.enrichedCount) pages checked")

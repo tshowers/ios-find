@@ -160,11 +160,19 @@ New Siri phrases can take a minute after install. Opening the app once helps.
 
 ---
 
+## 8b. TODD Market
+
+- [ ] Home: the last tile is a green **Shop** (no more "Events, coming soon"). Tapping it opens market.taliferro.tech.
+- [ ] Search something to buy (e.g. "buy scented candles"). Under the result: **From local stores on TODD Market** with up to 4 photo cards and "See all N →". A card opens that store on Market.
+- [ ] Search something no member store sells. The strip says **From independent shops**, tagged "Not on TODD Market yet", with "Shop on their site ↗" and "Buy it here" on each card.
+- [ ] A non-shopping search (weather, news, a question) shows no strip.
+- [ ] The meta line under a result says "N sources" (not "candidates").
+
 ## 9. Before submitting to the App Store
 
-- [ ] Version **1.4**, build **8** in Xcode (all three targets: app, share extension, widget).
+- [ ] Version **1.4**, build **9** in Xcode (all three targets: app, share extension, widget).
 - [ ] **App Store Connect privacy label** matches the privacy manifest: coarse location and search history, used for app functionality, not linked to you, no tracking. (Motion & Fitness and Spotlight stay on the phone, so they add nothing.)
-- [ ] "What's New" text mentions: Siri answer card and "Save that to Knowledge", Search with Find control, Find in iPhone search, How far?, Point, Adapt to what I'm doing, Watch a find, sharing and the widget.
+- [ ] "What's New" text mentions: Siri answer card and "Save that to Knowledge", Search with Find control, Find in iPhone search, How far?, Point, Adapt to what I'm doing, Watch a find, sharing, the widget, and shopping from local stores on TODD Market.
 - [ ] Merge **PR #3**, archive, upload, submit.
 
 ---

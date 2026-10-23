@@ -63,6 +63,8 @@ struct SearchView: View {
         let foreground: Color
         let query: String
         var disabled = false
+        /// Opens this page instead of searching.
+        var url: URL? = nil
         var id: String { label }
     }
 
@@ -74,7 +76,8 @@ struct SearchView: View {
         FindQuickAction(label: "Sports", systemImage: "trophy", background: Theme.tCyan, foreground: Theme.tCyanFg, query: "sports news"),
         FindQuickAction(label: "Conversion", systemImage: "arrow.left.arrow.right", background: Theme.tViolet, foreground: Theme.tVioletFg, query: "100 USD to EUR"),
         FindQuickAction(label: "Restaurants", systemImage: "fork.knife", background: Theme.tYellow, foreground: Theme.tYellowFg, query: "restaurants near me"),
-        FindQuickAction(label: "Events", systemImage: "calendar", background: Theme.surface, foreground: Theme.muted, query: "events near me", disabled: true),
+        // Shop independent stores on TODD Market (replaced the "Events, coming soon" tile).
+        FindQuickAction(label: "Shop", systemImage: "bag", background: Theme.tGreen, foreground: Theme.tGreenFg, query: "", url: URL(string: "https://market.taliferro.tech")),
     ]
 
     init(viewModel: SearchViewModel, awardsService: FindAwardsService, watchStore: FindWatchStore) {
@@ -315,7 +318,11 @@ struct SearchView: View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
             ForEach(Self.quickActions) { action in
                 Button {
-                    runSearchFromHome(action.query)
+                    if let url = action.url {
+                        openURL(url)
+                    } else {
+                        runSearchFromHome(action.query)
+                    }
                 } label: {
                     VStack(spacing: 6) {
                         Image(systemName: action.systemImage)
@@ -336,7 +343,7 @@ struct SearchView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(action.disabled || viewModel.isLoading)
-                .accessibilityLabel(action.disabled ? "\(action.label) coming soon" : "Search \(action.label)")
+                .accessibilityLabel(action.disabled ? "\(action.label) coming soon" : action.url != nil ? "\(action.label) on TODD Market" : "Search \(action.label)")
             }
         }
     }

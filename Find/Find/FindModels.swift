@@ -346,6 +346,8 @@ struct FindSearchResponse: Codable, Hashable {
     let timings: FindSearchTimings?
     // True when the results are News/Sports headlines from the RSS snapshot.
     let rssBacked: Bool?
+    // True for shopping searches; shows the TODD Market strip under the result.
+    var shoppingIntent: Bool? = nil
     var instant: FindInstantAnswer? = nil
 }
 
