@@ -10,6 +10,7 @@ enum FindQueryType: Codable, Hashable {
     case person
     case weather
     case conversion
+    case instant
     case local
     case movie
     case sports
@@ -24,6 +25,7 @@ enum FindQueryType: Codable, Hashable {
         case "person": self = .person
         case "weather": self = .weather
         case "conversion": self = .conversion
+        case "instant": self = .instant
         case "local": self = .local
         case "movie": self = .movie
         case "sports": self = .sports
@@ -40,6 +42,7 @@ enum FindQueryType: Codable, Hashable {
         case .person: try container.encode("person")
         case .weather: try container.encode("weather")
         case .conversion: try container.encode("conversion")
+        case .instant: try container.encode("instant")
         case .local: try container.encode("local")
         case .movie: try container.encode("movie")
         case .sports: try container.encode("sports")
@@ -85,6 +88,9 @@ enum FindConversionCategory: String, Codable {
     case weight
     case length
     case volume
+    case speed
+    case area
+    case data
 }
 
 struct FindConversionResult: Codable, Hashable {
@@ -100,6 +106,24 @@ struct FindConversionResult: Codable, Hashable {
     let source: String?
     /// Every supported currency against inputUnit (backend conversions only).
     var rates: [String: Double]? = nil
+    /// Every unit in the category with its factor to the base unit (backend unit conversions).
+    var unitOptions: [FindUnitOption]? = nil
+}
+
+struct FindUnitOption: Codable, Hashable {
+    let value: String
+    let label: String
+    let factor: Double?
+}
+
+/// An exact answer Find works out itself: date math, tips, percentages,
+/// sunrise/sunset (FindInstantAnswer in find-experience.service.ts).
+struct FindInstantAnswer: Codable, Hashable {
+    let kind: String
+    let label: String
+    let value: String
+    let title: String
+    let detail: String?
 }
 
 // OMDb details the backend attaches to a `movie` answer (results is empty).
@@ -200,7 +224,7 @@ struct FindAnswerBlock: Codable, Hashable {
 
 struct FindRankedResult: Codable, Identifiable, Hashable {
     var id: String { url }
-    let rank: Int
+    var rank: Int
     let title: String
     let summary: String
     let answer: String?
@@ -217,6 +241,8 @@ struct FindRankedResult: Codable, Identifiable, Hashable {
     let phone: String?
     // Every verified location of a business that has more than one.
     let locations: [FindBusinessLocation]?
+    // "Why this result": short reasons the page doesn't already show.
+    let reasons: [String]?
     // Set on News/Sports headlines served from the hourly RSS snapshot.
     let rssSource: String?
     let publishedAt: String?
@@ -242,8 +268,41 @@ struct FindRankedResult: Codable, Identifiable, Hashable {
         address = try container.decodeIfPresent(String.self, forKey: .address)
         phone = try container.decodeIfPresent(String.self, forKey: .phone)
         locations = try container.decodeIfPresent([FindBusinessLocation].self, forKey: .locations)
+        reasons = try container.decodeIfPresent([String].self, forKey: .reasons)
         rssSource = try container.decodeIfPresent(String.self, forKey: .rssSource)
         publishedAt = try container.decodeIfPresent(String.self, forKey: .publishedAt)
+    }
+}
+
+extension FindRankedResult {
+    /// A News/Sports headline the app fetched itself (HeadlineFeeds), shaped
+    /// like the backend's RSS results.
+    init(headlineTitle: String, summary: String, url: String, imageUrl: String, source: String, publishedAt: String, rank: Int = 0) {
+        self.rank = rank
+        self.title = headlineTitle
+        self.summary = summary
+        self.answer = nil
+        self.url = url
+        self.displayUrl = source
+        self.imageUrl = imageUrl
+        self.sourceType = .publisher
+        self.confidence = 0.95
+        self.pills = []
+        self.isFirstParty = false
+        self.hours = nil
+        self.address = nil
+        self.phone = nil
+        self.locations = nil
+        self.reasons = nil
+        self.rssSource = source
+        self.publishedAt = publishedAt
+    }
+
+    /// The same result at a new position (after merging headlines).
+    func withRank(_ rank: Int) -> FindRankedResult {
+        var copy = self
+        copy.rank = rank
+        return copy
     }
 }
 
@@ -252,7 +311,10 @@ struct FindBusinessLocation: Codable, Hashable {
     let address: String
     let phone: String?
     let mapsUrl: String?
-    let distance: String?
+    var distance: String?
+    /// The location's own (public) position, for "How far?" on the device.
+    let latitude: Double?
+    let longitude: Double?
 }
 
 struct FindSearchHandoff: Codable, Hashable {
@@ -284,6 +346,9 @@ struct FindSearchResponse: Codable, Hashable {
     let timings: FindSearchTimings?
     // True when the results are News/Sports headlines from the RSS snapshot.
     let rssBacked: Bool?
+    // True for shopping searches; shows the TODD Market strip under the result.
+    var shoppingIntent: Bool? = nil
+    var instant: FindInstantAnswer? = nil
 }
 
 struct FindSearchRequest: Encodable {
@@ -293,6 +358,10 @@ struct FindSearchRequest: Encodable {
     let postalCode: String?
     let latitude: Double?
     let longitude: Double?
+    // The user's time zone, and the answer types this app can show; the
+    // backend leaves newer types out for app versions that can't.
+    let timeZone: String
+    let features: [String]
 }
 
 enum FindFeedbackRating: String, Encodable, CaseIterable {
@@ -310,6 +379,86 @@ struct FindFeedbackRequest: Encodable {
 
 struct FindFeedbackResponse: Decodable {
     let success: Bool?
+}
+
+/// A watched result (FindWatch in find-experience.service.ts).
+struct FindWatch: Decodable, Identifiable, Hashable {
+    let id: String
+    let query: String
+    let url: String
+    let title: String
+    let kind: String
+    let createdAt: Double
+    let expiresAt: Double
+    let expired: Bool
+    let lastCheckedAt: Double?
+    let lastChange: FindWatchChange?
+    let changed: Bool
+    let current: String
+}
+
+struct FindWatchChange: Decodable, Hashable {
+    let at: Double
+    let summary: String
+}
+
+struct FindWatchRequest: Encodable {
+    let deviceId: String
+    var id: String? = nil
+    var query: String? = nil
+    var url: String? = nil
+    var title: String? = nil
+    var queryType: String? = nil
+    var address: String? = nil
+    var phone: String? = nil
+    var apnsToken: String? = nil
+    var environment: String? = nil
+}
+
+struct FindWatchResponse: Decodable {
+    let success: Bool
+    let watch: FindWatch?
+    let watches: [FindWatch]?
+    let message: String?
+}
+
+struct FindShareRequest: Encodable {
+    let query: String
+    let title: String
+    let summary: String
+    let url: String
+    let displayUrl: String
+    let imageUrl: String
+}
+
+struct FindShareResponse: Decodable {
+    let success: Bool
+    let url: String?
+}
+
+struct FindFollowupRequest: Encodable {
+    let query: String
+    let followup: String
+    let url: String
+    let title: String
+    let sourceUrls: [String]
+}
+
+/// A follow-up question about one result (FindFollowupResponse in
+/// find-experience.service.ts). mode "search" means run searchQuery instead.
+struct FindFollowupResponse: Decodable, Hashable {
+    let success: Bool
+    let mode: String
+    let answered: Bool
+    let answer: String
+    let sources: [FindFollowupSource]
+    let searchQuery: String
+}
+
+struct FindFollowupSource: Decodable, Hashable {
+    let title: String
+    let url: String
+    let displayUrl: String
 }
 
 struct FindSummarizeRequest: Encodable {

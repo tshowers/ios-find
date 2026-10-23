@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- find:// links, used by the home-screen widget (find://search, find://watching).
+	     Merged with the keys Xcode generates (GENERATE_INFOPLIST_FILE). Kept
+	     outside the synced Find/ folder so it isn't copied as a resource. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>tech.taliferro.Find</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>find</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

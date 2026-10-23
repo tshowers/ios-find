@@ -1,3 +1,4 @@
+import CoreLocation
 import SwiftUI
 import NaturalLanguage
 
@@ -14,9 +15,20 @@ struct ResultPageView: View {
     let feedbackStore: FindFeedbackStore
     /// Advances to the next page (the headline "Next" preview card).
     var onNext: (() -> Void)?
+    /// "Ask about this result"; nil hides the box.
+    var followupActions: FindFollowupActions?
+    /// "Watch a find"; nil hides the Watch button.
+    var watchStore: FindWatchStore?
 
     @Environment(\.openURL) private var openURL
     @State private var ownImageFailed = false
+    // "How far?" on a business's locations: worked out on the device.
+    @State private var deviceLocations: (resultURL: String, locations: [FindBusinessLocation])?
+    @State private var locatingDistances = false
+    @State private var distanceNote = ""
+    @State private var locationService: FindLocationService?
+    @State private var showingPointer = false
+    @ObservedObject private var activity = FindActivityMonitor.shared
 
     private enum ImageState { case own, fallback, none }
 
@@ -34,6 +46,13 @@ struct ResultPageView: View {
             .frame(maxWidth: 720, alignment: .leading)
             .frame(width: screenWidth)
             .padding(.bottom, 150)
+        }
+        .sheet(isPresented: $showingPointer) {
+            PointToPlaceView(
+                title: businessName.isEmpty ? (result?.title ?? "") : businessName,
+                targets: pointTargets,
+                mapsURL: appleMapsURL
+            )
         }
     }
 
@@ -66,6 +85,12 @@ struct ResultPageView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
+                if let reasons = result?.reasons, !reasons.isEmpty {
+                    Text(reasons.joined(separator: " · "))
+                        .font(Theme.font(14))
+                        .foregroundStyle(Theme.muted)
+                }
+
                 if !locations.isEmpty {
                     locationsList
                 } else if !businessAddress.isEmpty {
@@ -87,6 +112,8 @@ struct ResultPageView: View {
                 if !response.isHeadline, !actions.isEmpty {
                     FindActionTiles(actions: actions)
                 }
+
+                watchButton
 
                 if let hours = businessHours {
                     hoursCard(hours)
@@ -112,7 +139,16 @@ struct ResultPageView: View {
                     nextPreview(next)
                 }
 
+                if !response.isHeadline, let followupActions {
+                    followupBox(followupActions)
+                }
+
                 referencesSection
+
+                // TODD Market's "From local stores": shopping searches only, under the result.
+                if response.shoppingIntent == true {
+                    MarketStripView(query: response.query)
+                }
 
                 FindFeedbackRow(
                     store: feedbackStore,
@@ -256,6 +292,35 @@ struct ResultPageView: View {
     // answer - see FindResultPagerView's `hasLeadingAnswer` - so it never
     // co-opts a real ranked result's slot; page 0..<results.count always
     // shows that result's own title/summary/source, same as the grid does.
+    // Same rule as canWatch in find-home.component.ts: a real result, not a
+    // conversion, instant answer, weather, movie or question.
+    @ViewBuilder
+    private var watchButton: some View {
+        let unwatchable: [FindQueryType] = [.conversion, .instant, .weather, .question, .movie]
+        if let watchStore, let result, !isGroundedAnswerSlide, !unwatchable.contains(response.queryType) {
+            WatchButton(
+                store: watchStore,
+                query: response.query,
+                url: result.url,
+                title: businessName.isEmpty ? result.title : businessName,
+                queryType: response.queryType.rawString,
+                address: placeAddress.isEmpty ? nil : placeAddress,
+                phone: placePhone.isEmpty ? nil : placePhone
+            )
+        }
+    }
+
+    // The answer slide asks its references; any other page asks its own result.
+    private func followupBox(_ actions: FindFollowupActions) -> some View {
+        let references = response.answer?.references ?? []
+        let url = isGroundedAnswerSlide ? references.first?.url ?? "" : result?.url ?? ""
+        let title = isGroundedAnswerSlide ? references.first?.title ?? response.query : result?.title ?? ""
+        let sourceUrls = isGroundedAnswerSlide ? references.dropFirst().map(\.url) : []
+        return FollowupBox(query: response.query, url: url, title: title, sourceUrls: Array(sourceUrls), actions: actions)
+            .id(url)
+            .padding(.top, 4)
+    }
+
     private var isGroundedAnswerSlide: Bool {
         pageIndex == -1
     }
@@ -382,12 +447,15 @@ struct ResultPageView: View {
             return [
                 FindAction(id: "read", shortLabel: "Read", systemImage: "arrow.up.right.square", kind: .open(url)),
                 FindAction(id: "copy-link", shortLabel: "Copy", systemImage: "doc.on.doc", kind: .copy(urlString)),
-            ]
+            ] + saveToKnowledgeAction(result)
         }
 
         var actions: [FindAction] = []
         if isPlace, let mapsURL = appleMapsURL {
             actions.append(FindAction(id: "maps", shortLabel: "Go", systemImage: "location.fill", kind: .open(mapsURL)))
+        }
+        if !pointTargets.isEmpty {
+            actions.append(FindAction(id: "point", shortLabel: "Point", systemImage: "location.north.line", kind: .run { showingPointer = true }))
         }
         if let phoneURL {
             actions.append(FindAction(id: "call", shortLabel: "Call", systemImage: "phone", kind: .open(phoneURL)))
@@ -396,14 +464,63 @@ struct ResultPageView: View {
             actions.append(FindAction(id: "site", shortLabel: "Site", systemImage: "globe", kind: .open(url)))
             actions.append(FindAction(id: "copy-link", shortLabel: "Copy", systemImage: "doc.on.doc", kind: .copy(urlString)))
         }
-        return actions
+        return actions + saveToKnowledgeAction(result)
+    }
+
+    /// "Save to Knowledge": opens Docs' /knowledge/save with this result
+    /// filled in (see KnowledgeSaveLink).
+    private func saveToKnowledgeAction(_ result: FindRankedResult) -> [FindAction] {
+        guard let url = KnowledgeSaveLink.url(
+            query: response.query,
+            title: businessName.isEmpty ? result.title : businessName,
+            answer: result.answer ?? result.summary,
+            sourceURL: result.url,
+            keywords: result.pills
+        ) else { return [] }
+        return [FindAction(id: "knowledge", shortLabel: "Save", systemImage: "books.vertical", kind: .open(url))]
     }
 
     /// A business with more than one verified location lists them all in its
     /// result (currentLocations in find-home.component.ts).
     private var locations: [FindBusinessLocation] {
-        let all = result?.locations ?? []
+        let worked = deviceLocations.flatMap { $0.resultURL == result?.url ? $0.locations : nil }
+        let all = worked ?? result?.locations ?? []
         return all.count > 1 ? all : []
+    }
+
+    /// A search that didn't send a position has no distances; "How far?"
+    /// works them out here (canShowLocationDistances on the web).
+    private var canShowLocationDistances: Bool {
+        !locations.isEmpty
+            && !locations.contains { $0.distance != nil }
+            && locations.contains { $0.latitude != nil && $0.longitude != nil }
+    }
+
+    /// The position stays on the device: each location's distance, nearest
+    /// first (like the backend's addLocationDistances).
+    private func showLocationDistances() async {
+        distanceNote = ""
+        locatingDistances = true
+        let service = locationService ?? FindLocationService()
+        locationService = service
+        let coordinate = await service.currentCoordinate()
+        locatingDistances = false
+        guard let coordinate else {
+            distanceNote = "Location is off for Find. Turn it on in Settings, then try again."
+            return
+        }
+        let here = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        let resultURL = result?.url ?? ""
+        let sorted = locations
+            .map { location in
+                guard let latitude = location.latitude, let longitude = location.longitude else { return location }
+                var located = location
+                let miles = here.distance(from: CLLocation(latitude: latitude, longitude: longitude)) / 1609.34
+                located.distance = String(format: "%.1f mi", miles)
+                return located
+            }
+            .sorted { (Double($0.distance?.split(separator: " ").first ?? "") ?? .infinity) < (Double($1.distance?.split(separator: " ").first ?? "") ?? .infinity) }
+        deviceLocations = (resultURL, sorted)
     }
 
     /// "Bonhomie Coffee Bar (at Labour Temple)" reads as "Labour Temple".
@@ -424,6 +541,27 @@ struct ResultPageView: View {
                 .tracking(0.8)
                 .foregroundStyle(Theme.muted)
                 .padding(.vertical, 8)
+            if canShowLocationDistances {
+                Button {
+                    Task { await showLocationDistances() }
+                } label: {
+                    Text(locatingDistances ? "Finding you…" : "How far?")
+                        .font(Theme.font(14, weight: .semibold))
+                        .foregroundStyle(Theme.blueInk)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(Theme.surface, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(locatingDistances)
+                .padding(.bottom, 8)
+                if !distanceNote.isEmpty {
+                    Text(distanceNote)
+                        .font(Theme.font(13))
+                        .foregroundStyle(Theme.muted)
+                        .padding(.bottom, 8)
+                }
+            }
             ForEach(locations, id: \.self) { location in
                 Divider()
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
@@ -451,9 +589,16 @@ struct ResultPageView: View {
                     }
                     Spacer(minLength: 0)
                     if let distance = location.distance {
-                        Text(distance)
-                            .font(Theme.font(14, weight: .semibold))
-                            .foregroundStyle(Theme.text)
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(distance)
+                                .font(Theme.font(14, weight: .semibold))
+                                .foregroundStyle(Theme.text)
+                            if let walk = activity.walkingTime(for: distance) {
+                                Text(walk)
+                                    .font(Theme.font(12))
+                                    .foregroundStyle(Theme.muted)
+                            }
+                        }
                     }
                 }
                 .padding(.vertical, 10)
@@ -461,6 +606,16 @@ struct ResultPageView: View {
             Divider()
         }
         .frame(maxWidth: 420, alignment: .leading)
+    }
+
+    /// What "Point" aims at: every location (it picks the nearest), or the
+    /// one address.
+    private var pointTargets: [PointTarget] {
+        if !locations.isEmpty {
+            return locations.map { PointTarget(name: locationLabel($0), address: $0.address, latitude: $0.latitude, longitude: $0.longitude) }
+        }
+        guard isPlace, !placeAddress.isEmpty else { return [] }
+        return [PointTarget(name: "", address: placeAddress)]
     }
 
     private var placeAddress: String {
@@ -632,7 +787,7 @@ struct ResultPageView: View {
 
         var parts = [String(format: "%.1fs total", Double(timings.totalMs) / 1000)]
         if timings.candidateCount > 0 {
-            parts.append("\(timings.candidateCount) candidates")
+            parts.append("\(timings.candidateCount) sources")
         }
         if timings.enrichedCount > 0 {
             parts.append("\(timings.enrichedCount) pages checked")

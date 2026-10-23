@@ -37,7 +37,9 @@ final class FindAPIClient {
             maxResults: min(max(maxResults, 1), 10),
             postalCode: Self.extractPostalCode(from: trimmedQuery),
             latitude: latitude,
-            longitude: longitude
+            longitude: longitude,
+            timeZone: TimeZone.current.identifier,
+            features: ["instant", "units"]
         )
 
         return try await post(path: "find/search", payload: payload, responseType: FindSearchResponse.self)
@@ -54,6 +56,20 @@ final class FindAPIClient {
         guard let match = regex.firstMatch(in: query, range: range),
               let zipRange = Range(match.range(at: 1), in: query) else { return nil }
         return String(query[zipRange])
+    }
+
+    /// "Watch a find" endpoints (/find/watches…, /find/devices); all POSTs.
+    func watch(_ path: String, _ payload: FindWatchRequest) async throws -> FindWatchResponse {
+        try await post(path: path, payload: payload, responseType: FindWatchResponse.self)
+    }
+
+    /// A short find.taliferro.tech/s/<id> link that previews a result.
+    func share(_ payload: FindShareRequest) async throws -> FindShareResponse {
+        try await post(path: "find/share", payload: payload, responseType: FindShareResponse.self)
+    }
+
+    func followup(_ payload: FindFollowupRequest) async throws -> FindFollowupResponse {
+        try await post(path: "find/followup", payload: payload, responseType: FindFollowupResponse.self)
     }
 
     func summarize(query: String, url: String, title: String) async throws -> String {

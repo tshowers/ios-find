@@ -1,8 +1,10 @@
+import CoreSpotlight
 import SwiftUI
 
 struct SearchView: View {
     @StateObject private var viewModel: SearchViewModel
     @ObservedObject private var awardsService: FindAwardsService
+    @ObservedObject private var watchStore: FindWatchStore
     @StateObject private var tiltNav = TiltNavigationService()
     @State private var selectedTab: BottomTab = .home
     @State private var showingShareSheet = false
@@ -12,6 +14,11 @@ struct SearchView: View {
     @State private var highlightedPill = ""
     @State private var activePill = ""
     @State private var conversionAmountText = ""
+    @State private var locationSettingBlocked = false
+    @State private var activitySettingBlocked = false
+    @ObservedObject private var activity = FindActivityMonitor.shared
+    @ObservedObject private var speaker = FindSpeaker.shared
+    @State private var preparedShareURL: URL?
     @State private var conversionInputUnit = ""
     @State private var conversionOutputUnit = ""
     @State private var conversionRate: Double?
@@ -56,6 +63,8 @@ struct SearchView: View {
         let foreground: Color
         let query: String
         var disabled = false
+        /// Opens this page instead of searching.
+        var url: URL? = nil
         var id: String { label }
     }
 
@@ -67,12 +76,14 @@ struct SearchView: View {
         FindQuickAction(label: "Sports", systemImage: "trophy", background: Theme.tCyan, foreground: Theme.tCyanFg, query: "sports news"),
         FindQuickAction(label: "Conversion", systemImage: "arrow.left.arrow.right", background: Theme.tViolet, foreground: Theme.tVioletFg, query: "100 USD to EUR"),
         FindQuickAction(label: "Restaurants", systemImage: "fork.knife", background: Theme.tYellow, foreground: Theme.tYellowFg, query: "restaurants near me"),
-        FindQuickAction(label: "Events", systemImage: "calendar", background: Theme.surface, foreground: Theme.muted, query: "events near me", disabled: true),
+        // Shop independent stores on TODD Market (replaced the "Events, coming soon" tile).
+        FindQuickAction(label: "Shop", systemImage: "bag", background: Theme.tGreen, foreground: Theme.tGreenFg, query: "", url: URL(string: "https://market.taliferro.tech")),
     ]
 
-    init(viewModel: SearchViewModel, awardsService: FindAwardsService) {
+    init(viewModel: SearchViewModel, awardsService: FindAwardsService, watchStore: FindWatchStore) {
         _viewModel = StateObject(wrappedValue: viewModel)
         self.awardsService = awardsService
+        self.watchStore = watchStore
     }
 
     var body: some View {
@@ -121,6 +132,10 @@ struct SearchView: View {
             .padding(.bottom, footerReservedHeight(bottomInset: geometry.safeAreaInsets.bottom))
             .background(Theme.background)
             .overlay(alignment: .top) {
+                if speaker.isSpeaking {
+                    speakingBar
+                        .padding(.top, geometry.safeAreaInsets.top + 8)
+                }
                 #if DEBUG
                 if tiltNav.isActive {
                     tiltDebugReadout
@@ -139,7 +154,7 @@ struct SearchView: View {
                 Text(viewModel.errorMessage)
             }
             .sheet(isPresented: $showingShareSheet) {
-                if let url = currentShareURL {
+                if let url = preparedShareURL ?? currentShareURL {
                     ShareSheet(items: [url])
                 }
             }
@@ -148,8 +163,72 @@ struct SearchView: View {
         .onChange(of: tiltNav.tilt) { _, newValue in
             handleTilt(newValue)
         }
+        .onChange(of: selectedTab) { _, tab in
+            if tab == .history { Task { await watchStore.refresh(markSeen: true) } }
+        }
+        // A tapped Watch notification opens its search (also on a cold launch).
+        .onReceive(NotificationCenter.default.publisher(for: .findOpenWatchedQuery)) { _ in
+            openPendingWatchQuery()
+        }
+        // The "Search with Find" control opens a new search (also on a cold launch).
+        .onReceive(NotificationCenter.default.publisher(for: .findOpenNewSearch)) { _ in
+            openPendingNewSearch()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .findDeviceShaken)) { _ in
+            handleShake()
+        }
+        .onAppear {
+            openPendingWatchQuery()
+            openPendingNewSearch()
+        }
+        .onOpenURL { url in handleFindURL(url) }
+        // A tapped Find result in iPhone search (FindSpotlight) runs that search.
+        .onContinueUserActivity(CSSearchableItemActionType) { activity in
+            guard let query = FindSpotlight.query(for: activity) else { return }
+            var link = URLComponents(string: "find://search")!
+            link.queryItems = [URLQueryItem(name: "q", value: query)]
+            if let url = link.url { handleFindURL(url) }
+        }
+        .onChange(of: viewModel.searchResponse?.query) { _, _ in preparedShareURL = nil }
         .onDisappear {
             tiltNav.disable()
+        }
+    }
+
+    private func openPendingNewSearch() {
+        guard OpenFindSearchIntent.pending else { return }
+        OpenFindSearchIntent.pending = false
+        startNewSearch()
+    }
+
+    /// Shake = "not what I meant": clear the results and start over, keyboard
+    /// up. Ignored while tilt navigation is on (shaking would also flick).
+    private func handleShake() {
+        guard !tiltNav.isActive, viewModel.searchResponse != nil else { return }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        speaker.stop()
+        startNewSearch()
+    }
+
+    private func startNewSearch() {
+        viewModel.resetSearch()
+        selectedTab = .home
+        showingSearchScreen = true
+        // Raise the keyboard once the search screen is on screen.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            isSearchFieldFocused = true
+        }
+    }
+
+    private func openPendingWatchQuery() {
+        guard let query = AppDelegate.pendingWatchQuery else { return }
+        AppDelegate.pendingWatchQuery = nil
+        selectedTab = .home
+        Task {
+            await viewModel.runHistorySearch(query)
+            if viewModel.searchResponse != nil {
+                showingSearchScreen = false
+            }
         }
     }
 
@@ -239,7 +318,11 @@ struct SearchView: View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
             ForEach(Self.quickActions) { action in
                 Button {
-                    runSearchFromHome(action.query)
+                    if let url = action.url {
+                        openURL(url)
+                    } else {
+                        runSearchFromHome(action.query)
+                    }
                 } label: {
                     VStack(spacing: 6) {
                         Image(systemName: action.systemImage)
@@ -260,7 +343,7 @@ struct SearchView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(action.disabled || viewModel.isLoading)
-                .accessibilityLabel(action.disabled ? "\(action.label) coming soon" : "Search \(action.label)")
+                .accessibilityLabel(action.disabled ? "\(action.label) coming soon" : action.url != nil ? "\(action.label) on TODD Market" : "Search \(action.label)")
             }
         }
     }
@@ -285,6 +368,8 @@ struct SearchView: View {
                     weatherHomeView(screenWidth: screenWidth)
                 } else if isConversionMode {
                     conversionHomeView(screenWidth: screenWidth)
+                } else if let instant = viewModel.searchResponse?.instant, isInstantMode {
+                    instantHomeView(instant, screenWidth: screenWidth)
                 } else {
                     answerHomeView(screenWidth: screenWidth)
                 }
@@ -320,6 +405,55 @@ struct SearchView: View {
                 .frame(width: screenWidth)
                 .padding(.bottom, 150)
             }
+        }
+    }
+
+    // An exact answer Find works out itself (the web's .find-instant card).
+    private func instantHomeView(_ answer: FindInstantAnswer, screenWidth: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            resultPager(screenWidth: screenWidth)
+
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(answer.title)
+                            .font(Theme.font(15, weight: .semibold))
+                        Text(answer.value)
+                            .font(Theme.font(44, weight: .heavy))
+                            .tracking(-0.8)
+                            .minimumScaleFactor(0.5)
+                            .lineLimit(2)
+                            .textSelection(.enabled)
+                        if let detail = answer.detail, !detail.isEmpty {
+                            Text(detail)
+                                .font(Theme.font(15))
+                                .opacity(0.85)
+                        }
+                    }
+                    .foregroundStyle(Theme.tVioletFg)
+                    .padding(.horizontal, 22)
+                    .padding(.vertical, 20)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.tViolet, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+
+                    Button {
+                        UIPasteboard.general.string = "\(answer.title): \(answer.value)"
+                    } label: {
+                        Label("Copy result", systemImage: "doc.on.doc")
+                            .font(Theme.font(14, weight: .semibold))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Theme.blueInk)
+
+                    feedbackRow(meta: "Worked out by Find")
+                        .padding(.top, 12)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 6)
+                .frame(maxWidth: 560)
+                .frame(width: screenWidth)
+            }
+            .padding(.bottom, 150)
         }
     }
 
@@ -499,8 +633,12 @@ struct SearchView: View {
 
     /// Short unit shown in the unit pill: "USD", "°F", "km".
     private func conversionUnitShort(_ unit: String) -> String {
-        if conversionCategory == .temperature { return "°\(unit)" }
-        return unit == "l" ? "L" : unit
+        if conversionCategory == .temperature { return unit == "K" ? "K" : "°\(unit)" }
+        let shortNames = [
+            "l": "L", "floz": "fl oz", "kph": "km/h", "mps": "m/s", "knot": "kn", "sqin": "sq in", "sqft": "sq ft",
+            "sqm": "m²", "sqkm": "km²", "sqmi": "sq mi", "acre": "ac", "tonne": "t",
+        ]
+        return shortNames[unit] ?? unit
     }
 
     // Weather (3j): compact blue card, high/low and stats beside the temperature.
@@ -639,6 +777,15 @@ struct SearchView: View {
         VStack(spacing: 0) {
             resultPager(screenWidth: screenWidth)
 
+            if viewModel.searchResponse?.queryType == .local {
+                OpenNowButton(isOn: viewModel.isOpenNowSearch) {
+                    Task { await viewModel.toggleOpenNow() }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 4)
+            }
+
             Group {
                 if let response = viewModel.searchResponse {
                     if results.isEmpty {
@@ -646,9 +793,9 @@ struct SearchView: View {
                         // exactly one page to show - nothing to swipe between,
                         // and the shelf chevrons are already disabled for
                         // this case (see resultShelf).
-                        ResultPageView(response: response, pageIndex: hasLeadingAnswer ? -1 : 0, screenWidth: screenWidth, feedbackStore: viewModel.feedbackStore)
+                        ResultPageView(response: response, pageIndex: hasLeadingAnswer ? -1 : 0, screenWidth: screenWidth, feedbackStore: viewModel.feedbackStore, followupActions: followupActions, watchStore: watchStore)
                     } else {
-                        FindResultPagerView(response: response, currentIndex: pagingIndexBinding, screenWidth: screenWidth, feedbackStore: viewModel.feedbackStore, hasLeadingAnswer: hasLeadingAnswer)
+                        FindResultPagerView(response: response, currentIndex: pagingIndexBinding, screenWidth: screenWidth, feedbackStore: viewModel.feedbackStore, followupActions: followupActions, watchStore: watchStore, hasLeadingAnswer: hasLeadingAnswer)
                     }
                 }
             }
@@ -767,7 +914,11 @@ struct SearchView: View {
 
     // Weather, conversion and movie answers are one result: Back plus a label.
     private var isSingleResultMode: Bool {
-        isWeatherMode || isConversionMode || isMovieMode
+        isWeatherMode || isConversionMode || isMovieMode || isInstantMode
+    }
+
+    private var isInstantMode: Bool {
+        viewModel.searchResponse?.queryType == .instant && viewModel.searchResponse?.instant != nil
     }
 
     private var isMovieMode: Bool {
@@ -777,6 +928,7 @@ struct SearchView: View {
     private var pagerCenterLabel: String {
         if isWeatherMode { return "Weather" }
         if isMovieMode { return "Movie" }
+        if isInstantMode { return viewModel.searchResponse?.instant?.label ?? "Result" }
         return conversionCategory == .currency ? "Currency conversion" : "Unit conversion"
     }
 
@@ -794,8 +946,82 @@ struct SearchView: View {
                 if let url = URL(string: result.url) {
                     openURL(url)
                 }
-            }
+            },
+            openNow: gridOpenNowControl
         )
+    }
+
+    private var followupActions: FindFollowupActions {
+        let model = viewModel
+        return FindFollowupActions(
+            ask: { request in await model.askFollowup(request) },
+            search: { searchQuery in Task { await model.runFollowupSearch(searchQuery) } }
+        )
+    }
+
+    private var gridOpenNowControl: OpenNowControl? {
+        guard viewModel.searchResponse?.queryType == .local else { return nil }
+        let model = viewModel
+        return OpenNowControl(isOn: model.isOpenNowSearch, toggle: { Task { await model.toggleOpenNow() } })
+    }
+
+    // "Watching" at the top of History (the web's .find-watching section).
+    private var watchingSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("WATCHING")
+                    .font(Theme.font(12, weight: .bold))
+                    .tracking(0.8)
+                    .foregroundStyle(Theme.muted)
+                Spacer()
+                Text("\(watchStore.watches.count) of \(FindWatchStore.maxWatches)")
+                    .font(Theme.font(12))
+                    .foregroundStyle(Theme.muted)
+            }
+            ForEach(watchStore.watches) { watch in
+                let highlighted = watch.changed || watchStore.highlightedIDs.contains(watch.id)
+                HStack(spacing: 12) {
+                    Button {
+                        selectedTab = .home
+                        Task {
+                            await viewModel.runHistorySearch(watch.query)
+                            if viewModel.searchResponse != nil { showingSearchScreen = false }
+                        }
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(watch.current.isEmpty ? watchStore.kindLabel(watch) : "\(watchStore.kindLabel(watch)) · \(watch.current)")
+                                .font(Theme.font(12, weight: .bold))
+                                .foregroundStyle(highlighted ? Theme.tBlueFg : Theme.muted)
+                            Text(watch.title)
+                                .font(Theme.font(15, weight: .semibold))
+                                .foregroundStyle(Theme.text)
+                                .lineLimit(1)
+                            Text(watchStore.status(watch))
+                                .font(Theme.font(13, weight: highlighted ? .semibold : .regular))
+                                .foregroundStyle(highlighted ? Theme.tBlueFg : Theme.muted)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
+
+                    VStack(alignment: .trailing, spacing: 6) {
+                        if watch.expired || watchStore.daysLeft(watch) <= 5 {
+                            Button(watch.expired ? "Watch again" : "Renew") { Task { await watchStore.renew(watch) } }
+                        }
+                        Button("Stop") { Task { await watchStore.remove(watch) } }
+                            .accessibilityLabel("Stop watching \(watch.title)")
+                    }
+                    .font(Theme.font(13, weight: .semibold))
+                    .foregroundStyle(Theme.blueInk)
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(highlighted ? Theme.tBlue : Theme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .opacity(watch.expired ? 0.7 : 1)
+            }
+        }
     }
 
     private func historyView(screenWidth: CGFloat) -> some View {
@@ -834,6 +1060,10 @@ struct SearchView: View {
                             .stroke(Theme.border, lineWidth: 1)
                     )
                 }
+            }
+
+            if !watchStore.watches.isEmpty {
+                watchingSection
             }
 
             if viewModel.searchHistory.isEmpty {
@@ -875,6 +1105,96 @@ struct SearchView: View {
         .background(Theme.cardBackground)
     }
 
+    /// Shown while an answer is read aloud (driving).
+    private var speakingBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "speaker.wave.2.fill")
+            Text("Reading the answer")
+                .font(Theme.font(14, weight: .semibold))
+            Button("Stop") { speaker.stop() }
+                .font(Theme.font(14, weight: .bold))
+                .foregroundStyle(Theme.blueInk)
+        }
+        .foregroundStyle(Theme.text)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Theme.surface, in: Capsule())
+        .shadow(color: .black.opacity(0.12), radius: 8, y: 2)
+    }
+
+    // "Adapt to what I'm doing": driving reads answers aloud, walking adds
+    // walking times (FindActivityMonitor). iOS only - browsers can't tell.
+    private var activitySettingCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: Binding(
+                get: { activity.isEnabled },
+                set: { enabled in
+                    Task {
+                        let allowed = await activity.setEnabled(enabled)
+                        activitySettingBlocked = enabled && !allowed
+                    }
+                }
+            )) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Adapt to what I'm doing")
+                        .font(Theme.font(16, weight: .bold))
+                        .foregroundStyle(Theme.text)
+                    Text("When you're driving, Find reads answers aloud (turn the phone face-down to stop). When you're walking, distances show walking times. Uses Motion & Fitness on your phone; nothing is sent.")
+                        .font(Theme.font(13))
+                        .foregroundStyle(Theme.subtext)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .tint(Theme.accent)
+
+            if activitySettingBlocked {
+                Text("Motion & Fitness is off for Find. Turn it on in Settings › Privacy & Security › Motion & Fitness, then try again.")
+                    .font(Theme.font(13))
+                    .foregroundStyle(Theme.danger)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    // "Use my location" (the web's .find-info-setting card).
+    private var locationSettingCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: Binding(
+                get: { viewModel.useLocationEverywhere },
+                set: { enabled in
+                    Task {
+                        let granted = await viewModel.setUseLocationEverywhere(enabled)
+                        locationSettingBlocked = enabled && !granted
+                    }
+                }
+            )) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Use my location")
+                        .font(Theme.font(16, weight: .bold))
+                        .foregroundStyle(Theme.text)
+                    Text("Shows how far away places are on every search, not just \"near me\". Your location is sent with each search and never stored.")
+                        .font(Theme.font(13))
+                        .foregroundStyle(Theme.subtext)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .tint(Theme.accent)
+
+            if locationSettingBlocked {
+                Text("Location is off for Find. Turn it on in Settings › Privacy & Security › Location Services › Find, then try again.")
+                    .font(Theme.font(13))
+                    .foregroundStyle(Theme.danger)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
     private func infoView(screenWidth: CGFloat) -> some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 14) {
@@ -905,6 +1225,11 @@ struct SearchView: View {
                 infoCard("03", "People → Lead Vault", "Find shows the best web results first. When a query looks like a person, buyer, or prospect, you can continue the search in Lead Vault when you’re ready.")
                 infoCard("04", "The philosophy", "Most search tools optimize for clicks. Find optimizes for the right result. We believe the best search experience ends with you knowing something — not choosing between 10 links that might.")
 
+                locationSettingCard
+                if activity.isSupported {
+                    activitySettingCard
+                }
+
                 VStack(spacing: 6) {
                     Text("BUILT BY")
                         .font(Theme.font(13, weight: .black))
@@ -912,6 +1237,16 @@ struct SearchView: View {
                     Link(TaliferroCompany.name, destination: TaliferroCompany.url)
                         .font(Theme.font(22, weight: .bold))
                         .foregroundStyle(Theme.accent)
+                    VStack(spacing: 2) {
+                        Text("“Our mission is to make search obsolete.”")
+                            .font(Theme.font(17, weight: .semibold))
+                            .italic()
+                            .foregroundStyle(Theme.text)
+                        Text("Written in 2010. Still the plan.")
+                            .font(Theme.font(12))
+                            .foregroundStyle(Theme.subtext)
+                    }
+                    .multilineTextAlignment(.center)
                     Text("Find is part of TODD — the Momentum System designed for teams that move fast and need information faster.")
                         .font(Theme.font(15))
                         .foregroundStyle(Theme.subtext)
@@ -1097,7 +1432,7 @@ struct SearchView: View {
     private func shareView(screenWidth: CGFloat) -> some View {
         VStack(spacing: 16) {
             Spacer()
-            if let url = currentShareURL {
+            if let url = preparedShareURL ?? currentShareURL {
                 Text("Share this result")
                     .font(Theme.font(22, weight: .bold))
                 Text(url.absoluteString)
@@ -1106,7 +1441,7 @@ struct SearchView: View {
                     .multilineTextAlignment(.center)
                     .frame(width: min(screenWidth - 48, 320))
                 Button("Open Share Sheet") {
-                    showingShareSheet = true
+                    if preparedShareURL == nil { prepareShare() } else { showingShareSheet = true }
                 }
                 .buttonStyle(.plain)
                 .font(Theme.font(17, weight: .bold))
@@ -1114,7 +1449,7 @@ struct SearchView: View {
                 .background(Theme.accent)
                 .foregroundStyle(.white)
                 .clipShape(Capsule())
-                Text("In TODD, this also offers the path to add the result into Knowledge when your account supports it.")
+                Text("The link previews this result in Messages and opens it in Find.")
                     .font(Theme.font(15))
                     .foregroundStyle(Theme.subtext)
                     .multilineTextAlignment(.center)
@@ -1260,9 +1595,9 @@ struct SearchView: View {
                         viewModel.resetSearch()
                         showingSearchScreen = true
                         selectedTab = .home
-                    } else if tab == .share, currentShareURL != nil {
+                    } else if tab == .share, viewModel.searchResponse != nil {
                         selectedTab = .share
-                        showingShareSheet = true
+                        prepareShare()
                     } else {
                         selectedTab = tab
                     }
@@ -1271,6 +1606,18 @@ struct SearchView: View {
                         Image(systemName: tab.systemImage)
                             .font(.system(size: 20, weight: selectedTab == tab ? .semibold : .regular))
                             .frame(height: 22)
+                            .overlay(alignment: .topTrailing) {
+                                // Changed watches (the web's .find-tab__badge).
+                                if tab == .history, watchStore.changedCount > 0 {
+                                    Text("\(watchStore.changedCount)")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 4)
+                                        .frame(minWidth: 16, minHeight: 16)
+                                        .background(Theme.danger, in: Capsule())
+                                        .offset(x: 10, y: -6)
+                                }
+                            }
                         Text(tab.rawValue.capitalized)
                             .font(Theme.font(11, weight: selectedTab == tab ? .semibold : .regular))
                     }
@@ -1431,6 +1778,10 @@ struct SearchView: View {
     }
 
     private var conversionUnitOptions: [ConversionUnitOption] {
+        // Backend unit conversions list every unit in their category.
+        if let options = viewModel.searchResponse?.conversion?.unitOptions, !options.isEmpty {
+            return options.map { ConversionUnitOption(value: $0.value, label: $0.label) }
+        }
         switch conversionCategory {
         case .currency:
             return [
@@ -1445,7 +1796,7 @@ struct SearchView: View {
         case .weight: return [.init(value: "lb", label: "Pounds"), .init(value: "kg", label: "Kilograms")]
         case .length: return [.init(value: "in", label: "Inches"), .init(value: "cm", label: "Centimeters"), .init(value: "ft", label: "Feet"), .init(value: "m", label: "Meters")]
         case .volume: return [.init(value: "gal", label: "US Gallons"), .init(value: "l", label: "Liters")]
-        case .none: return []
+        case .speed, .area, .data, .none: return []
         }
     }
 
@@ -1500,8 +1851,8 @@ struct SearchView: View {
             return amount * rate
         }
         if conversion.category == .temperature {
-            if conversionInputUnit == conversionOutputUnit { return amount }
-            return conversionOutputUnit == "F" ? amount * 9 / 5 + 32 : (amount - 32) * 5 / 9
+            let celsius = conversionInputUnit == "F" ? (amount - 32) * 5 / 9 : conversionInputUnit == "K" ? amount - 273.15 : amount
+            return conversionOutputUnit == "F" ? celsius * 9 / 5 + 32 : conversionOutputUnit == "K" ? celsius + 273.15 : celsius
         }
         guard let inputFactor = unitFactor(conversion.category, unit: conversionInputUnit),
               let outputFactor = unitFactor(conversion.category, unit: conversionOutputUnit) else { return nil }
@@ -1509,12 +1860,16 @@ struct SearchView: View {
     }
 
     private func unitFactor(_ category: FindConversionCategory, unit: String) -> Double? {
+        if let factor = viewModel.searchResponse?.conversion?.unitOptions?.first(where: { $0.value == unit })?.factor {
+            return factor
+        }
         switch category {
         case .distance: return ["mi": 1609.344, "km": 1000][unit]
         case .weight: return ["lb": 0.45359237, "kg": 1][unit]
         case .length: return ["in": 0.0254, "cm": 0.01, "ft": 0.3048, "m": 1][unit]
         case .volume: return ["gal": 3.785411784, "l": 1][unit]
         case .temperature, .currency: return 1
+        case .speed, .area, .data: return nil
         }
     }
 
@@ -1610,6 +1965,52 @@ struct SearchView: View {
         (viewModel.searchResponse?.query ?? viewModel.query).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// Makes the short find.taliferro.tech/s/<id> link (it previews the result
+    /// in Messages and opens it in Find), then shows the share sheet.
+    private func prepareShare() {
+        let response = viewModel.searchResponse
+        let result = currentResult
+        let title: String
+        let summary: String
+        if let instant = response?.instant, response?.queryType == .instant {
+            title = "\(instant.title): \(instant.value)"
+            summary = instant.detail ?? ""
+        } else {
+            title = result?.title ?? response?.query ?? viewModel.query
+            summary = response?.answer?.text ?? result?.summary ?? ""
+        }
+        Task {
+            preparedShareURL = await viewModel.shareLink(title: title, summary: summary, result: result)
+            showingShareSheet = preparedShareURL != nil
+        }
+    }
+
+    /// find://search?q=… opens a search, find://search alone the search
+    /// screen, find://watching the Watching list (the home-screen widget).
+    private func handleFindURL(_ url: URL) {
+        guard url.scheme == "find" else { return }
+        switch url.host {
+        case "watching":
+            selectedTab = .history
+        case "search":
+            let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first(where: { $0.name == "q" })?.value ?? ""
+            if query.isEmpty {
+                viewModel.resetSearch()
+                showingSearchScreen = true
+                selectedTab = .home
+            } else {
+                selectedTab = .home
+                Task {
+                    await viewModel.runHistorySearch(query)
+                    if viewModel.searchResponse != nil { showingSearchScreen = false }
+                }
+            }
+        default:
+            break
+        }
+    }
+
     private var currentShareURL: URL? {
         if let urlString = currentResult?.url {
             return URL(string: urlString)
@@ -1691,7 +2092,10 @@ struct SearchView: View {
                 awardsService: awardsService,
                 locationService: FindLocationService()
             ),
-            awardsService: awardsService
+            awardsService: awardsService,
+            watchStore: FindWatchStore(apiClient: FindAPIClient(
+                config: AppConfig(apiBaseURL: URL(string: "https://api.taliferro.tech/api")!, apiKey: "preview")
+            ))
         )
     }
 }

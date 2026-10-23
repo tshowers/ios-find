@@ -105,6 +105,7 @@ struct FindAction: Identifiable {
     enum Kind {
         case open(URL)
         case copy(String)
+        case run(() -> Void)
     }
 
     let id: String
@@ -155,6 +156,8 @@ struct FindActionTiles: View {
                 try? await Task.sleep(for: .seconds(1.5))
                 if copiedID == action.id { copiedID = nil }
             }
+        case .run(let handler):
+            handler()
         }
     }
 }
@@ -250,6 +253,7 @@ extension FindQueryType {
         case .person: return "person"
         case .weather: return "weather"
         case .conversion: return "conversion"
+        case .instant: return "instant"
         case .local: return "local"
         case .movie: return "movie"
         case .sports: return "sports"

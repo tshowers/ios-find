@@ -16,6 +16,8 @@ struct ResultGridView: View {
     let screenWidth: CGFloat
     let onBack: () -> Void
     let onOpen: (FindRankedResult) -> Void
+    /// Nearby results only: the "Open now" button's state and action.
+    var openNow: OpenNowControl? = nil
 
     enum Layout {
         case plate, textFirst, ranked, phone
@@ -60,6 +62,13 @@ struct ResultGridView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+
+            if let openNow {
+                OpenNowButton(isOn: openNow.isOn, action: openNow.toggle)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, sidePadding)
+                    .padding(.bottom, 6)
+            }
 
             ScrollView(showsIndicators: false) {
                 if results.isEmpty {
@@ -448,5 +457,30 @@ private struct SourceTint {
             hash = hash &* 31 &+ UInt32(unit)
         }
         (background, foreground) = pairs[Int(hash % UInt32(pairs.count))]
+    }
+}
+
+struct OpenNowControl {
+    let isOn: Bool
+    let toggle: () -> Void
+}
+
+/// Nearby results: show only places open right now (.find-open-now on the web).
+struct OpenNowButton: View {
+    let isOn: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text("Open now")
+                .font(Theme.font(14, weight: .semibold))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .foregroundStyle(isOn ? Theme.tBlueFg : Theme.text)
+                .background(isOn ? Theme.tBlue : Color.clear, in: Capsule())
+                .overlay(Capsule().stroke(isOn ? Color.clear : Theme.surface2, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 }
