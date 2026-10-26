@@ -1159,6 +1159,31 @@ struct SearchView: View {
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
+    // Opens the App Store's review form, any time (AppReview also asks once
+    // after a few good searches).
+    private var rateCard: some View {
+        Link(destination: AppReview.writeReviewURL) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Rate Find")
+                        .font(Theme.font(16, weight: .bold))
+                        .foregroundStyle(Theme.text)
+                    Text("Tell others what you think on the App Store.")
+                        .font(Theme.font(13))
+                        .foregroundStyle(Theme.subtext)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+                Image(systemName: "star.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Theme.accent)
+            }
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+    }
+
     // "Use my location" (the web's .find-info-setting card).
     private var locationSettingCard: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -1229,6 +1254,7 @@ struct SearchView: View {
                 if activity.isSupported {
                     activitySettingCard
                 }
+                rateCard
 
                 VStack(spacing: 6) {
                     Text("BUILT BY")

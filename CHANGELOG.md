@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here.
 
+## 2026-10-26
+
+### Changed
+- Build bumped 9 → 10 (still 1.4).
+
+### Added
+- App Store rating prompt (`AppReview.swift`): after the 5th search that
+  shows a result, spread over at least 2 days, Find asks for a rating with
+  Apple's built-in prompt. Not on top of an award, not while driving, and
+  at most once per version; iOS itself caps it at 3 times a year and never
+  shows it in TestFlight.
+- Info: a "Rate Find" card that opens the App Store review form any time.
+
 ## 2026-10-12
 
 ### Changed

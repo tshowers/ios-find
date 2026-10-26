@@ -181,6 +181,15 @@ final class SearchViewModel: ObservableObject {
             if let unlocked = awardsService.recordSearch() {
                 pendingAwardUnlock = unlocked
             }
+            // The 5th search with something to show, over at least 2 days. Not
+            // on top of an award, and not while driving.
+            if !resolvedResponse.results.isEmpty || !answerText.isEmpty {
+                AppReview.recordSuccess(
+                    threshold: 5,
+                    minDays: 2,
+                    canAsk: pendingAwardUnlock == nil && FindActivityMonitor.shared.mode != .driving
+                )
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
