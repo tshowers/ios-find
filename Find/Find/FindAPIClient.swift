@@ -14,7 +14,8 @@ enum FindAPIError: LocalizedError {
     }
 }
 
-final class FindAPIClient {
+// Immutable after init (config, coder instances), so cards can call it from any task.
+final class FindAPIClient: @unchecked Sendable {
     private let config: AppConfig
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
@@ -78,6 +79,24 @@ final class FindAPIClient {
         return response.answer
     }
 
+    /// Is this query one thing (a team, a store, a country, a movie...)?
+    /// Answers before the search finishes; nil means no card.
+    func detectEntity(query: String) async throws -> FindEntity? {
+        let payload = FindEntityDetectRequest(query: query.trimmingCharacters(in: .whitespacesAndNewlines))
+        return try await post(path: "find/entity", payload: payload, responseType: FindEntityDetectResponse.self).entity
+    }
+
+    /// One section of a single-item card, as the raw JSON of its `data`
+    /// (nil when the backend has none). Each section loads on its own so the
+    /// card fills in as they arrive; the card decodes the shape it expects.
+    func entitySection(_ entity: FindEntity, section: String, latitude: Double? = nil, longitude: Double? = nil) async throws -> Data? {
+        let payload = FindEntitySectionRequest(type: entity.type, league: entity.league, id: entity.id, section: section, latitude: latitude, longitude: longitude)
+        let data = try await postData(path: "find/entity/section", payload: payload)
+        guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let section = object["data"], !(section is NSNull) else { return nil }
+        return try JSONSerialization.data(withJSONObject: section)
+    }
+
     func submitFeedback(_ payload: FindFeedbackRequest) async throws {
         _ = try await post(path: "find/feedback", payload: payload, responseType: FindFeedbackResponse.self)
     }
@@ -87,6 +106,10 @@ final class FindAPIClient {
         payload: Request,
         responseType: Response.Type
     ) async throws -> Response {
+        try decoder.decode(responseType, from: try await postData(path: path, payload: payload))
+    }
+
+    private func postData<Request: Encodable>(path: String, payload: Request) async throws -> Data {
         let url = config.apiBaseURL.appending(path: path)
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -104,7 +127,7 @@ final class FindAPIClient {
             throw FindAPIError.httpError(httpResponse.statusCode)
         }
 
-        return try decoder.decode(responseType, from: data)
+        return data
     }
 }
 

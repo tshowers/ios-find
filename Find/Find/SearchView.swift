@@ -166,6 +166,11 @@ struct SearchView: View {
         .onChange(of: selectedTab) { _, tab in
             if tab == .history { Task { await watchStore.refresh(markSeen: true) } }
         }
+        // A single-item card shows as soon as the query is known to name one
+        // thing, while the normal search is still running.
+        .onChange(of: viewModel.entity) { _, entity in
+            if entity != nil, selectedTab == .home { showingSearchScreen = false }
+        }
         // A tapped Watch notification opens its search (also on a cold launch).
         .onReceive(NotificationCenter.default.publisher(for: .findOpenWatchedQuery)) { _ in
             openPendingWatchQuery()
@@ -258,7 +263,7 @@ struct SearchView: View {
 
     private func homeView(screenWidth: CGFloat) -> some View {
         Group {
-            if showingSearchScreen || (viewModel.searchResponse == nil && !enteringNewSearch) {
+            if showingSearchScreen || (viewModel.searchResponse == nil && !viewModel.showsEntityCard && !enteringNewSearch) {
                 searchHomeView(screenWidth: screenWidth)
             } else {
                 resultHomeView(screenWidth: screenWidth)
@@ -363,7 +368,9 @@ struct SearchView: View {
         VStack(spacing: 0) {
             resultSearchBar
 
-            if viewModel.searchResponse != nil {
+            if viewModel.showsEntityCard, let entity = viewModel.entity {
+                entityCardView(entity, screenWidth: screenWidth)
+            } else if viewModel.searchResponse != nil {
                 if isWeatherMode {
                     weatherHomeView(screenWidth: screenWidth)
                 } else if isConversionMode {
@@ -771,6 +778,45 @@ struct SearchView: View {
             queryType: viewModel.searchResponse?.queryType ?? .entity,
             meta: meta
         )
+    }
+
+    /// One rich card for a query that names one thing (web: find-home's
+    /// entity cards). "More results" dismisses it for the usual pages.
+    private func entityCardView(_ entity: FindEntity, screenWidth: CGFloat) -> some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 18) {
+                EntityCardView(
+                    entity: entity,
+                    query: viewModel.searchResponse?.query ?? viewModel.query,
+                    moreCount: viewModel.isLoading ? nil : results.count,
+                    fetch: viewModel.entitySectionFetcher(for: entity),
+                    watchStore: watchStore,
+                    onMore: { viewModel.entityDismissed = true },
+                    onSearch: { search in
+                        viewModel.query = search
+                        Task { await viewModel.runSearch() }
+                    }
+                )
+                feedbackRow(meta: entityFooterNote(entity))
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            // Clears the tab bar.
+            .padding(.bottom, 110)
+            .frame(width: screenWidth, alignment: .leading)
+        }
+    }
+
+    private func entityFooterNote(_ entity: FindEntity) -> String {
+        switch entity.type {
+        case "sports": return "Scores and stats from ESPN"
+        case "shop": return "Products and prices from 16Ahead Store"
+        case "country", "state", "city": return "Facts from Wikidata · weather from Open-Meteo"
+        case "movie": return "Ratings via OMDb · box office and cast from Wikidata"
+        case "tv": return "Ratings via OMDb · episodes from TVmaze"
+        case "artist", "album", "song": return "Facts from Wikidata · tracks and previews from Apple Music"
+        default: return "Hours, locations and ratings from Google"
+        }
     }
 
     private func answerHomeView(screenWidth: CGFloat) -> some View {
@@ -2046,7 +2092,7 @@ struct SearchView: View {
 
     private var showStickyPills: Bool {
         !currentPills.isEmpty
-            && ((selectedTab == .home && !showingSearchScreen && viewModel.searchResponse != nil)
+            && ((selectedTab == .home && !showingSearchScreen && viewModel.searchResponse != nil && !viewModel.showsEntityCard)
                 || selectedTab == .grid)
     }
 

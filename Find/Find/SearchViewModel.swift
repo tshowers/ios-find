@@ -21,6 +21,15 @@ final class SearchViewModel: ObservableObject {
     // find-home.component.ts): off by default. When on, every search sends
     // the position; when off, only "near me" and bare weather searches do.
     @Published private(set) var useLocationEverywhere = UserDefaults.standard.bool(forKey: "find.useLocation")
+    // Single-item results (web: find-home's `entity`): a query that names one
+    // thing gets one card, shown while the normal search is still running.
+    // "More results" dismisses it for the usual pages.
+    @Published private(set) var entity: FindEntity?
+    @Published var entityDismissed = false
+    /// The phone's position for a store/restaurant/service card (nearest location).
+    private var entityCoordinate: CLLocationCoordinate2D?
+    private var entityTask: Task<Void, Never>?
+    private var searchID = UUID()
 
     let feedbackStore: FindFeedbackStore
     private let apiClient: FindAPIClient
@@ -143,6 +152,7 @@ final class SearchViewModel: ObservableObject {
         isLoading = true
         errorMessage = ""
         summaryText = ""
+        detectEntity(trimmed)
 
         // Headlines from feeds the backend can't reach (ESPN, NPR) load on
         // the phone alongside the search, and are merged into an RSS response.
@@ -195,6 +205,44 @@ final class SearchViewModel: ObservableObject {
         }
 
         isLoading = false
+    }
+
+    // MARK: Single-item results
+
+    /// Asks whether the query is one thing while the search runs. A store,
+    /// restaurant or local service card is about the nearest location, so
+    /// that's when the phone's position is asked for (web: the same).
+    private func detectEntity(_ query: String) {
+        clearEntity()
+        let id = UUID()
+        searchID = id
+        entityTask = Task { [weak self, apiClient, locationService] in
+            guard let found = try? await apiClient.detectEntity(query: query), !Task.isCancelled else { return }
+            let coordinate = found.isBusiness ? await locationService.currentCoordinate() : nil
+            guard let self, !Task.isCancelled, self.searchID == id else { return }
+            self.entityCoordinate = coordinate
+            self.entity = found
+        }
+    }
+
+    private func clearEntity() {
+        entityTask?.cancel()
+        entityTask = nil
+        entity = nil
+        entityDismissed = false
+        entityCoordinate = nil
+    }
+
+    var showsEntityCard: Bool { entity != nil && !entityDismissed }
+
+    /// Loads one section of the current card; nil when it has none or fails.
+    func entitySectionFetcher(for entity: FindEntity) -> @Sendable (String) async -> Data? {
+        let client = apiClient
+        let latitude = entityCoordinate?.latitude
+        let longitude = entityCoordinate?.longitude
+        return { section in
+            try? await client.entitySection(entity, section: section, latitude: latitude, longitude: longitude)
+        }
     }
 
     func select(_ result: FindRankedResult) {
@@ -250,6 +298,7 @@ final class SearchViewModel: ObservableObject {
     }
 
     func resetSearch() {
+        clearEntity()
         query = ""
         isLoading = false
         errorMessage = ""
