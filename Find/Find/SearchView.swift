@@ -814,7 +814,7 @@ struct SearchView: View {
         case "country", "state", "city": return "Facts from Wikidata · weather from Open-Meteo"
         case "movie": return "Ratings via OMDb · box office and cast from Wikidata"
         case "tv": return "Ratings via OMDb · episodes from TVmaze"
-        case "artist" where entity.id.hasPrefix("tm."): return "A Taliferro Music artist · tracks and previews from Apple Music"
+        case "artist" where entity.id.hasPrefix("tm."): return "A Taliferro Music artist"
         case "artist", "album", "song": return "Facts from Wikidata · tracks and previews from Apple Music"
         default: return "Hours, locations and ratings from Google"
         }

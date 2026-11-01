@@ -196,7 +196,16 @@ struct EntityMusicCard: View {
 
     /// Spotify, Apple Music, YouTube Music: the item's own pages, else a search there.
     private var listen: [EntityAction] {
-        [
+        if let links = facts?.links, !(links.radio ?? "").isEmpty {
+            // A Taliferro Music artist: only where they really are, no searches.
+            let appleId = facts?.appleId ?? ""
+            return [
+                EntityAction("Spotify", systemImage: "play.fill", url: links.spotify),
+                EntityAction("Apple Music", systemImage: "music.note", url: (apple?.links?.apple ?? "").ifEmpty(appleId.isEmpty ? "" : "https://music.apple.com/us/artist/\(appleId)")),
+                EntityAction("Bandcamp", systemImage: "opticaldisc", url: links.bandcamp),
+            ].compactMap { $0 }
+        }
+        return [
             EntityAction("Spotify", systemImage: "play.fill", url: (facts?.links?.spotify ?? "").ifEmpty("https://open.spotify.com/search/\(encodedSearch)")),
             EntityAction("Apple Music", systemImage: "music.note", url: (apple?.links?.apple ?? "").ifEmpty("https://music.apple.com/us/search?term=\(encodedSearch)")),
             EntityAction("YouTube", systemImage: "play.rectangle.fill", url: "https://music.youtube.com/search?q=\(encodedSearch)"),
@@ -224,12 +233,9 @@ struct EntityMusicCard: View {
                 EntityAction("Wikipedia", systemImage: "book", url: links?.wikipedia),
             ].compactMap { $0 }
         default:
-            // A Taliferro Music artist: the radio that plays them, and Bandcamp (their site).
+            // A Taliferro Music artist: the radio that plays them (Bandcamp is under Listen).
             if let radio = links?.radio, !radio.isEmpty {
-                return [
-                    EntityAction("Radio", systemImage: "radio", url: radio),
-                    EntityAction("Bandcamp", systemImage: "opticaldisc", url: links?.bandcamp),
-                ].compactMap { $0 }
+                return [EntityAction("Radio", systemImage: "radio", url: radio)].compactMap { $0 }
             }
             let name = entity.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
             return [
