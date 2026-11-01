@@ -28,6 +28,8 @@ struct EntityCardView: View {
                     EntityRegionCard(entity: entity, fetch: fetch, onSearch: onSearch)
                 case "movie", "tv":
                     EntityMediaCard(entity: entity, fetch: fetch)
+                case "artist", "album", "song":
+                    EntityMusicCard(entity: entity, fetch: fetch)
                 default:
                     EmptyView()
                 }

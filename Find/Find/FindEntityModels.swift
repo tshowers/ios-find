@@ -27,6 +27,7 @@ struct FindEntity: Decodable, Equatable, Identifiable {
     var isBusiness: Bool { ["store", "restaurant", "service"].contains(type) }
     var isRegion: Bool { ["country", "state", "city"].contains(type) }
     var isMedia: Bool { ["movie", "tv"].contains(type) }
+    var isMusic: Bool { ["artist", "album", "song"].contains(type) }
 
     static func == (lhs: FindEntity, rhs: FindEntity) -> Bool {
         lhs.type == rhs.type && lhs.id == rhs.id
@@ -384,6 +385,50 @@ struct FindTvShowSection: Decodable {
     let cast: [FindListRow]?
     let episodes: [FindListRow]?
     let currentSeason: Int?
+    let links: Links?
+}
+
+// MARK: Artists, albums and songs
+
+struct FindMusicFactsSection: Decodable {
+    struct Review: Decodable, Hashable { let source: String; let score: String }
+    struct Links: Decodable { let spotify: String?; let youtube: String?; let genius: String?; let website: String?; let wikipedia: String? }
+    let artist: String?
+    let album: String?
+    let released: String?
+    let imageUrl: String?
+    let tiles: [FindStatTile]?
+    let credits: [FindListRow]?
+    let members: [FindListRow]?
+    let reviews: [Review]?
+    let links: Links?
+}
+
+struct FindMusicTrack: Decodable, Hashable {
+    let number: Int?
+    let name: String
+    let length: String?
+    let previewUrl: String?
+    let url: String?
+    let album: String?
+}
+
+struct FindMusicAppleSection: Decodable {
+    struct Latest: Decodable { let name: String; let kind: String; let released: String?; let artworkUrl: String?; let url: String? }
+    struct Links: Decodable { let apple: String?; let appleAlbum: String?; let appleArtist: String? }
+    let artworkUrl: String?
+    // Song
+    let track: FindMusicTrack?
+    let album: String?
+    // Album
+    let tracks: [FindMusicTrack]?
+    let trackCount: Int?
+    let length: String?
+    // Artist
+    let topSongs: [FindMusicTrack]?
+    let albums: [FindListRow]?
+    let albumCount: Int?
+    let latest: Latest?
     let links: Links?
 }
 
