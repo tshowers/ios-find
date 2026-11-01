@@ -392,7 +392,8 @@ struct FindTvShowSection: Decodable {
 
 struct FindMusicFactsSection: Decodable {
     struct Review: Decodable, Hashable { let source: String; let score: String }
-    struct Links: Decodable { let spotify: String?; let youtube: String?; let genius: String?; let website: String?; let wikipedia: String? }
+    // radio and bandcamp: Taliferro Music's own artists only.
+    struct Links: Decodable { let spotify: String?; let youtube: String?; let genius: String?; let website: String?; let wikipedia: String?; let radio: String?; let bandcamp: String? }
     let artist: String?
     let album: String?
     let released: String?
