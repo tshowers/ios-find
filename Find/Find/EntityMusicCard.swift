@@ -224,6 +224,13 @@ struct EntityMusicCard: View {
                 EntityAction("Wikipedia", systemImage: "book", url: links?.wikipedia),
             ].compactMap { $0 }
         default:
+            // A Taliferro Music artist: the radio that plays them, and Bandcamp (their site).
+            if let radio = links?.radio, !radio.isEmpty {
+                return [
+                    EntityAction("Radio", systemImage: "radio", url: radio),
+                    EntityAction("Bandcamp", systemImage: "opticaldisc", url: links?.bandcamp),
+                ].compactMap { $0 }
+            }
             let name = entity.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
             return [
                 // Tour dates: no free source, so a search where tickets are sold.
