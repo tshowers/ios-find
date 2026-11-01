@@ -403,6 +403,7 @@ struct FindMusicFactsSection: Decodable {
     let members: [FindListRow]?
     let reviews: [Review]?
     let links: Links?
+    let appleId: String?
 }
 
 struct FindMusicTrack: Decodable, Hashable {
