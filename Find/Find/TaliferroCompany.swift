@@ -7,11 +7,11 @@ enum TaliferroCompany {
     static let name = "Taliferro Tech"
     static let legalName = "Taliferro Tech, LLC"
     static let url = URL(string: "https://taliferro.tech")!
-    static let email = "support@taliferro.tech"
+    static let email = "support@16ahead.com"
     static let links: [(label: String, url: URL)] = [
-        ("Terms & Conditions", URL(string: "https://taliferro.tech/terms")!),
-        ("Privacy Rights", URL(string: "https://taliferro.tech/privacy-rights")!),
-        ("Privacy Policy", URL(string: "https://taliferro.tech/privacy")!),
+        ("Terms & Conditions", URL(string: "https://16ahead.com/terms")!),
+        ("Privacy Rights", URL(string: "https://16ahead.com/privacy-rights")!),
+        ("Privacy Policy", URL(string: "https://16ahead.com/privacy")!),
         ("Careers", URL(string: "https://taliferro.tech/careers")!),
     ]
 }

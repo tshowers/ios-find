@@ -798,7 +798,7 @@ struct ResultPageView: View {
         } else if let answer = result?.answer, !answer.isEmpty,
                   result?.isFirstParty != true,
                   response.queryType != .question {
-            parts.append("TODD summary")
+            parts.append("16Ahead summary")
         } else if response.queryType == .question {
             parts.append(isGroundedAnswerSlide ? "results summary" : "supporting result")
         }

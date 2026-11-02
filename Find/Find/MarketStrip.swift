@@ -119,7 +119,7 @@ struct MarketStripView: View {
     private var memberStrip: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
-                label("From local stores on TODD Market", systemImage: "bag")
+                label("From local stores on 16Ahead Store", systemImage: "bag")
                 Spacer(minLength: 0)
                 if let searchURL {
                     Link("See all \(content.total) →", destination: searchURL)
@@ -151,7 +151,7 @@ struct MarketStripView: View {
         .padding(16)
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("From local stores on TODD Market")
+        .accessibilityLabel("From local stores on 16Ahead Store")
     }
 
     private var listedStrip: some View {
@@ -159,7 +159,7 @@ struct MarketStripView: View {
             HStack(spacing: 10) {
                 label("From independent shops", systemImage: "storefront")
                 Spacer(minLength: 0)
-                Text("Not on TODD Market yet")
+                Text("Not on 16Ahead Store yet")
                     .font(Theme.font(12, weight: .semibold))
                     .foregroundStyle(Theme.muted)
                     .padding(.horizontal, 10)
@@ -201,7 +201,7 @@ struct MarketStripView: View {
         .padding(16)
         .background(Theme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("From independent shops, not on TODD Market yet")
+        .accessibilityLabel("From independent shops, not on 16Ahead Store yet")
     }
 
     private func grid<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
