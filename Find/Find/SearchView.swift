@@ -348,7 +348,7 @@ struct SearchView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(action.disabled || viewModel.isLoading)
-                .accessibilityLabel(action.disabled ? "\(action.label) coming soon" : action.url != nil ? "\(action.label) on TODD Market" : "Search \(action.label)")
+                .accessibilityLabel(action.disabled ? "\(action.label) coming soon" : action.url != nil ? "\(action.label) on 16Ahead Store" : "Search \(action.label)")
             }
         }
     }
@@ -816,6 +816,9 @@ struct SearchView: View {
         case "tv": return "Ratings via OMDb · episodes from TVmaze"
         case "artist" where entity.id.hasPrefix("tm."): return "A Taliferro Music artist"
         case "artist", "album", "song": return "Facts from Wikidata · tracks and previews from Apple Music"
+        case "company", "product": return "Taliferro Tech · first-party listing"
+        case "corporation": return "Facts from Wikidata and the SEC · market data from Yahoo Finance and Nasdaq"
+        case "item": return "Prices from store pages, which may have changed · scores from the reviewers"
         default: return "Hours, locations and ratings from Google"
         }
     }
@@ -1320,7 +1323,7 @@ struct SearchView: View {
                             .foregroundStyle(Theme.subtext)
                     }
                     .multilineTextAlignment(.center)
-                    Text("Find is part of TODD — the Momentum System designed for teams that move fast and need information faster.")
+                    Text("Find is part of 16Ahead — the Momentum System designed for teams that move fast and need information faster.")
                         .font(Theme.font(15))
                         .foregroundStyle(Theme.subtext)
                         .multilineTextAlignment(.center)

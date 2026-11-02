@@ -4,6 +4,10 @@ import SwiftUI
 /// business, shop, region and media cards in find-home). It shows while the
 /// normal search is still running; "More results" swaps in the usual pages.
 struct EntityCardView: View {
+    /// Every type drawn below. The app sends it with each detect request, so
+    /// the backend never sends a card this version can't draw.
+    static let cardTypes = ["sports", "store", "restaurant", "service", "shop", "country", "state", "city", "movie", "tv", "artist", "album", "song", "company", "product", "corporation", "item"]
+
     let entity: FindEntity
     let query: String
     let moreCount: Int?
@@ -30,6 +34,8 @@ struct EntityCardView: View {
                     EntityMediaCard(entity: entity, fetch: fetch)
                 case "artist", "album", "song":
                     EntityMusicCard(entity: entity, fetch: fetch)
+                case "company", "product", "corporation", "item":
+                    EntityCompanyCard(entity: entity, fetch: fetch)
                 default:
                     EmptyView()
                 }

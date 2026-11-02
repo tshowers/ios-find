@@ -28,6 +28,9 @@ struct FindEntity: Decodable, Equatable, Identifiable {
     var isRegion: Bool { ["country", "state", "city"].contains(type) }
     var isMedia: Bool { ["movie", "tv"].contains(type) }
     var isMusic: Bool { ["artist", "album", "song"].contains(type) }
+    /// Our own company and products, another company, or a product to buy:
+    /// one card (web: find-company-card).
+    var isCompanyCard: Bool { ["company", "product", "corporation", "item"].contains(type) }
 
     static func == (lhs: FindEntity, rhs: FindEntity) -> Bool {
         lhs.type == rhs.type && lhs.id == rhs.id
@@ -45,6 +48,9 @@ struct FindEntityTeamLinks: Decodable {
 
 struct FindEntityDetectRequest: Encodable {
     let query: String
+    /// The cards this app draws; the backend sends no other kind (an app
+    /// that sent none, up to 1.5, drew a blank card for anything new).
+    let cardTypes: [String]
 }
 
 struct FindEntityDetectResponse: Decodable {
@@ -89,6 +95,158 @@ struct FindListRow: Decodable, Hashable {
 struct FindEntitySummary: Decodable {
     let text: String
     let sources: [String]?
+}
+
+// MARK: Companies and products (design_handoff_find_taliferro_results)
+
+// Our own company ("taliferro tech") and products ("image creator"), another
+// company ("apple") and a product to buy ("dell xps 14") share one
+// "overview" (web: FindFirstPartyOverview). Another company adds "market";
+// another company or a product adds "videos" (YouTube).
+
+/// A video for the card's player: an MP4 (with a light-mode version, maybe)
+/// or a YouTube link. Our own files come as paths on find.16ahead.com.
+struct FindCardVideo: Decodable, Hashable {
+    let url: String
+    let urlLight: String?
+    let poster: String?
+    let posterLight: String?
+    let title: String
+    let sub: String?
+    let duration: String?
+}
+
+struct FindCardMeta: Decodable, Hashable {
+    let value: String
+    let strong: Bool?
+}
+
+struct FindCardContact: Decodable, Hashable {
+    /// call, email, directions or website.
+    let kind: String
+    let label: String
+    let value: String
+    let url: String
+}
+
+/// A store's price for a product, as its page last showed it.
+struct FindStorePrice: Decodable, Hashable {
+    let store: String
+    let name: String
+    let price: String
+    let url: String
+    let lowest: Bool
+}
+
+/// The tinted panel: contact options, a product's steps, or prices at stores.
+struct FindCardPanel: Decodable {
+    let kind: String
+    let label: String
+    let title: String?
+    let text: String?
+    let contacts: [FindCardContact]?
+    let steps: [String]?
+    let prices: [FindStorePrice]?
+}
+
+struct FindProductRow: Decodable, Hashable {
+    let name: String
+    let iconUrl: String?
+    let url: String?
+    let text: String?
+}
+
+struct FindProductGroup: Decodable, Hashable {
+    let name: String
+    let products: [FindProductRow]
+}
+
+struct FindCardFounder: Decodable {
+    let name: String
+    let role: String
+    let photoUrl: String?
+    let linkedin: String?
+}
+
+/// A row with an optional verdict (sub), link and how good a score is (strong, mixed, weak).
+struct FindNamedRow: Decodable, Hashable {
+    let name: String
+    let value: String?
+    let sub: String?
+    let url: String?
+    let tone: String?
+}
+
+struct FindNamedList: Decodable, Hashable {
+    let title: String
+    let rows: [FindNamedRow]
+}
+
+struct FindCardChips: Decodable {
+    let title: String
+    let items: [String]
+}
+
+struct FindCardMore: Decodable, Hashable {
+    let title: String
+    let text: String?
+    let rows: [FindNamedRow]?
+}
+
+struct FindCardFAQ: Decodable, Hashable {
+    let q: String
+    let a: String
+}
+
+struct FindCardAction: Decodable, Hashable {
+    let kind: String
+    let label: String
+    let shortLabel: String?
+    let url: String
+}
+
+struct FindCardOverview: Decodable {
+    let context: String?
+    let tags: [FindEntityTag]?
+    let meta: [FindCardMeta]?
+    let videos: [FindCardVideo]?
+    let panel: FindCardPanel?
+    let tiles: [FindStatTile]?
+    let groups: [FindProductGroup]?
+    let usedBy: [FindProductRow]?
+    let founder: FindCardFounder?
+    let chips: FindCardChips?
+    let lists: [FindNamedList]?
+    let more: [FindCardMore]?
+    let faq: [FindCardFAQ]?
+    let actions: [FindCardAction]?
+}
+
+/// Another company's market cap (or share price) and next earnings report.
+struct FindCompanyMarket: Decodable {
+    struct Next: Decodable {
+        let label: String
+        let title: String
+        let text: String
+    }
+
+    let tile: FindStatTile?
+    let next: Next?
+}
+
+struct FindCardVideos: Decodable {
+    let videos: [FindCardVideo]
+}
+
+/// Our own logos, icons and videos come as paths on the Find site.
+enum FindWebURL {
+    static let site = URL(string: "https://find.16ahead.com")!
+
+    static func resolve(_ text: String?) -> URL? {
+        guard let text, !text.isEmpty else { return nil }
+        if text.hasPrefix("/") { return URL(string: text, relativeTo: site)?.absoluteURL }
+        return URL(string: text)
+    }
 }
 
 // MARK: Teams (NFL, NBA, MLB, college)
