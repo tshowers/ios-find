@@ -82,7 +82,7 @@ final class FindAPIClient: @unchecked Sendable {
     /// Is this query one thing (a team, a store, a country, a movie...)?
     /// Answers before the search finishes; nil means no card.
     func detectEntity(query: String) async throws -> FindEntity? {
-        let payload = FindEntityDetectRequest(query: query.trimmingCharacters(in: .whitespacesAndNewlines))
+        let payload = FindEntityDetectRequest(query: query.trimmingCharacters(in: .whitespacesAndNewlines), cardTypes: EntityCardView.cardTypes)
         return try await post(path: "find/entity", payload: payload, responseType: FindEntityDetectResponse.self).entity
     }
 
