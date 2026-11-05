@@ -76,8 +76,8 @@ struct SearchView: View {
         FindQuickAction(label: "Sports", systemImage: "trophy", background: Theme.tCyan, foreground: Theme.tCyanFg, query: "sports news"),
         FindQuickAction(label: "Conversion", systemImage: "arrow.left.arrow.right", background: Theme.tViolet, foreground: Theme.tVioletFg, query: "100 USD to EUR"),
         FindQuickAction(label: "Restaurants", systemImage: "fork.knife", background: Theme.tYellow, foreground: Theme.tYellowFg, query: "restaurants near me"),
-        // Shop independent stores on TODD Market (replaced the "Events, coming soon" tile).
-        FindQuickAction(label: "Shop", systemImage: "bag", background: Theme.tGreen, foreground: Theme.tGreenFg, query: "", url: URL(string: "https://market.taliferro.tech")),
+        // Shop independent stores on 16Ahead Store (replaced the "Events, coming soon" tile).
+        FindQuickAction(label: "Shop", systemImage: "bag", background: Theme.tGreen, foreground: Theme.tGreenFg, query: "", url: URL(string: "https://16ahead.store")),
     ]
 
     init(viewModel: SearchViewModel, awardsService: FindAwardsService, watchStore: FindWatchStore) {
@@ -277,13 +277,19 @@ struct SearchView: View {
     private func searchHomeView(screenWidth: CGFloat) -> some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 24) {
+                // The 16Ahead lockup, as on the web: the Find dial, "16Ahead",
+                // then the product name in muted text (.brand-product).
                 HStack(spacing: 12) {
                     findLogo
-                    Text("Find")
+                    (Text("16Ahead ").foregroundStyle(Theme.text)
+                        + Text("Find").fontWeight(.medium).foregroundStyle(Theme.muted))
                         .font(Theme.font(44, weight: .bold))
                         .tracking(-1.76)
-                        .foregroundStyle(Theme.text)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
                 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("16Ahead Find")
                 .padding(.top, 96)
 
                 VStack(spacing: 10) {
@@ -1313,6 +1319,15 @@ struct SearchView: View {
                     Link(TaliferroCompany.name, destination: TaliferroCompany.url)
                         .font(Theme.font(22, weight: .bold))
                         .foregroundStyle(Theme.accent)
+                    // Same "Powered by 16Ahead" line as the web Info screen.
+                    HStack(spacing: 4) {
+                        Text("Powered by")
+                            .foregroundStyle(Theme.subtext)
+                        Link(TaliferroCompany.platformName, destination: TaliferroCompany.platformURL)
+                            .foregroundStyle(Theme.accent)
+                    }
+                    .font(Theme.font(14, weight: .semibold))
+                    .padding(.bottom, 6)
                     VStack(spacing: 2) {
                         Text("“Our mission is to make search obsolete.”")
                             .font(Theme.font(17, weight: .semibold))
@@ -1330,7 +1345,7 @@ struct SearchView: View {
 
                     HStack(spacing: 14) {
                         Link(TaliferroCompany.email, destination: URL(string: "mailto:\(TaliferroCompany.email)")!)
-                        Link("taliferro.tech", destination: TaliferroCompany.url)
+                        Link("16ahead.com", destination: TaliferroCompany.platformURL)
                     }
                     .font(Theme.font(14, weight: .semibold))
                     .foregroundStyle(Theme.accent)
@@ -1640,6 +1655,8 @@ struct SearchView: View {
         }
     }
 
+    /// The 16Ahead Find dial (taliferro-ui/brand/products 11-find), with
+    /// separate light and dark artwork in the asset catalog.
     private var findLogo: some View {
         Image("FindLogo")
             .resizable()
@@ -2041,7 +2058,7 @@ struct SearchView: View {
         (viewModel.searchResponse?.query ?? viewModel.query).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// Makes the short find.taliferro.tech/s/<id> link (it previews the result
+    /// Makes the short find.16ahead.com/s/<id> link (it previews the result
     /// in Messages and opens it in Find), then shows the share sheet.
     private func prepareShare() {
         let response = viewModel.searchResponse

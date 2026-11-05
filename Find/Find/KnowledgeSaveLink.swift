@@ -14,7 +14,7 @@ enum KnowledgeSaveLink {
         let keywords = keywords
             .filter { $0.lowercased() != query.lowercased() && $0.range(of: #"^\d+(\.\d+)?\s*mi$|^★"#, options: .regularExpression) == nil }
             .prefix(8)
-        var link = URLComponents(string: "https://docs.taliferro.tech/knowledge/save")!
+        var link = URLComponents(string: "https://docs.16ahead.com/knowledge/save")!
         link.queryItems = [
             URLQueryItem(name: "q", value: query),
             URLQueryItem(name: "title", value: title),

@@ -7,6 +7,9 @@ enum TaliferroCompany {
     static let name = "Taliferro Tech"
     static let legalName = "Taliferro Tech, LLC"
     static let url = URL(string: "https://taliferro.tech")!
+    /// The platform Find is part of (MENU_COMPANY.name / .url on the web).
+    static let platformName = "16Ahead"
+    static let platformURL = URL(string: "https://16ahead.com")!
     static let email = "support@16ahead.com"
     static let links: [(label: String, url: URL)] = [
         ("Terms & Conditions", URL(string: "https://16ahead.com/terms")!),

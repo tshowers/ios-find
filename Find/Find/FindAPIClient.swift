@@ -64,7 +64,7 @@ final class FindAPIClient: @unchecked Sendable {
         try await post(path: path, payload: payload, responseType: FindWatchResponse.self)
     }
 
-    /// A short find.taliferro.tech/s/<id> link that previews a result.
+    /// A short find.16ahead.com/s/<id> link that previews a result.
     func share(_ payload: FindShareRequest) async throws -> FindShareResponse {
         try await post(path: "find/share", payload: payload, responseType: FindShareResponse.self)
     }

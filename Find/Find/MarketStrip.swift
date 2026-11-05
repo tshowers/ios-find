@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// TODD Market's public network search (functions/market, shop.routes.js).
-private let marketBase = "https://market.taliferro.tech"
+/// 16Ahead Store's public network search (formerly market.taliferro.tech; functions/market, shop.routes.js).
+private let marketBase = "https://16ahead.store"
 
 /// A product an independent store in the Market network sells.
 struct MarketItem: Codable, Hashable {
@@ -13,7 +13,7 @@ struct MarketItem: Codable, Hashable {
     let storeSlug: String
 }
 
-/// A product from a shop Market has listed but that hasn't joined (Market's "Not on TODD Market yet").
+/// A product from a shop Market has listed but that hasn't joined (Market's "Not on 16Ahead Store yet").
 struct MarketListingItem: Codable, Hashable {
     let id: String
     let title: String
@@ -80,10 +80,10 @@ final class MarketStripLoader {
     }
 }
 
-/// "From local stores on TODD Market": items independent stores in the
+/// "From local stores on 16Ahead Store": items independent stores in the
 /// Market network sell that match the search. When no member store has it,
 /// the same strip shows products from shops Market has listed, marked "Not
-/// on TODD Market yet", with their own site and "Buy it here" (Market's
+/// on 16Ahead Store yet", with their own site and "Buy it here" (Market's
 /// search, where "Want to buy it here?" lives). Mirrors the web app's
 /// market-strip.component.ts; shown only for shopping searches
 /// (the response's shoppingIntent), under the result.

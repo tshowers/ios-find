@@ -145,7 +145,7 @@ struct ResultPageView: View {
 
                 referencesSection
 
-                // TODD Market's "From local stores": shopping searches only, under the result.
+                // 16Ahead Store's "From local stores": shopping searches only, under the result.
                 if response.shoppingIntent == true {
                     MarketStripView(query: response.query)
                 }
@@ -695,12 +695,12 @@ struct ResultPageView: View {
             }
             name = "find-sports.png"
         }
-        return URL(string: "https://find.taliferro.tech/fallback/\(name)")
+        return URL(string: "https://find.16ahead.com/fallback/\(name)")
     }
 
     private static func isFindFallback(_ image: String) -> Bool {
         guard let url = URL(string: image) else { return false }
-        return url.host == "find.taliferro.tech" && url.path.hasPrefix("/fallback/")
+        return ["find.taliferro.tech", "find.16ahead.com"].contains(url.host ?? "") && url.path.hasPrefix("/fallback/")
     }
 
     /// 190pt photo with rounded corners. Cropped, never stretched: the crop

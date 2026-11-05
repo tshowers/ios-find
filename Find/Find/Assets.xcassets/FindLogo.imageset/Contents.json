@@ -1,17 +1,18 @@
 {
   "images" : [
     {
-      "filename" : "find-logo.png",
-      "idiom" : "universal",
-      "scale" : "1x"
+      "filename" : "find-dial-light.png",
+      "idiom" : "universal"
     },
     {
-      "idiom" : "universal",
-      "scale" : "2x"
-    },
-    {
-      "idiom" : "universal",
-      "scale" : "3x"
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "find-dial-dark.png",
+      "idiom" : "universal"
     }
   ],
   "info" : {
