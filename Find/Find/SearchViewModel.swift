@@ -75,11 +75,11 @@ final class SearchViewModel: ObservableObject {
     }
 
     /// A short share link for the current result; falls back to a plain
-    /// find.taliferro.tech/?query= link if the backend can't make one.
+    /// find.16ahead.com/?query= link if the backend can't make one.
     func shareLink(title: String, summary: String, result: FindRankedResult?) async -> URL? {
         let current = (searchResponse?.query ?? query).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !current.isEmpty else { return nil }
-        var fallback = URLComponents(string: "https://find.taliferro.tech/")!
+        var fallback = URLComponents(string: "https://find.16ahead.com/")!
         fallback.queryItems = [URLQueryItem(name: "query", value: current)]
         let request = FindShareRequest(
             query: current, title: title, summary: String(summary.prefix(300)),
