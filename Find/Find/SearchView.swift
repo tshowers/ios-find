@@ -815,6 +815,7 @@ struct SearchView: View {
 
     private func entityFooterNote(_ entity: FindEntity) -> String {
         switch entity.type {
+        case "word": return "Definitions from Wiktionary · CC BY-SA"
         case "sports": return "Scores and stats from ESPN"
         case "shop": return "Products and prices from 16Ahead Store"
         case "country", "state", "city": return "Facts from Wikidata · weather from Open-Meteo"

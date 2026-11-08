@@ -6,7 +6,7 @@ import SwiftUI
 struct EntityCardView: View {
     /// Every type drawn below. The app sends it with each detect request, so
     /// the backend never sends a card this version can't draw.
-    static let cardTypes = ["sports", "store", "restaurant", "service", "shop", "country", "state", "city", "movie", "tv", "artist", "album", "song", "company", "product", "corporation", "item"]
+    static let cardTypes = ["word", "sports", "store", "restaurant", "service", "shop", "country", "state", "city", "movie", "tv", "artist", "album", "song", "company", "product", "corporation", "item"]
 
     let entity: FindEntity
     let query: String
@@ -22,6 +22,8 @@ struct EntityCardView: View {
         VStack(alignment: .leading, spacing: 18) {
             Group {
                 switch entity.type {
+                case "word":
+                    EntityWordCard(entity: entity, fetch: fetch, onSearch: onSearch)
                 case "sports":
                     EntitySportsCard(entity: entity, fetch: fetch)
                 case "store", "restaurant", "service":

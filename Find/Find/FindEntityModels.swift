@@ -440,6 +440,22 @@ struct FindShopProduct: Decodable, Hashable, Identifiable {
     let watchUrl: String?
 }
 
+/// A dictionary entry ("define <word>"), trimmed by the backend by fixed rules, never reworded.
+struct FindWordSection: Decodable {
+    struct Definition: Decodable { let text: String; let example: String }
+    struct Meaning: Decodable {
+        let partOfSpeech: String
+        let definitions: [Definition]
+        let moreCount: Int
+        let synonyms: [String]
+    }
+    let word: String
+    let phonetic: String
+    let audioUrl: String?
+    let meanings: [Meaning]
+    let sourceUrl: String
+}
+
 struct FindShopSection: Decodable {
     struct Collection: Decodable, Hashable { let name: String; let count: Int? }
     let description: String?
